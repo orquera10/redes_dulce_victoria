@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Dulce Victoria</string>
+    <string name="title_activity_main">Dulce Victoria</string>
+    <string name="package_name">cloud.serviciosinformaticos.dulcevictoria</string>
+    <string name="custom_url_scheme">cloud.serviciosinformaticos.dulcevictoria</string>
+</resources>

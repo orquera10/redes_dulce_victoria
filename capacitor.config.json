@@ -1,0 +1,8 @@
+{
+  "appId": "cloud.serviciosinformaticos.dulcevictoria",
+  "appName": "Dulce Victoria",
+  "webDir": "dist",
+  "android": {
+    "backgroundColor": "#f8f4e9"
+  }
+}
