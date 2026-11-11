@@ -199,26 +199,67 @@ export default function App() {
   };
 
   return (
-    <main className="min-h-screen bg-[#e7ddd0] px-0 py-0 text-[#563a2a] sm:px-6 sm:py-8">
-      <div className="phone-shell relative mx-auto min-h-screen w-full max-w-[430px] overflow-hidden bg-[#f8f4e9] sm:min-h-[880px] sm:rounded-[38px] sm:border-[7px] sm:border-[#563a2a] sm:shadow-[0_28px_80px_rgba(73,43,38,0.22)]">
-        <header className="px-5 pb-5 pt-5">
-          <div className="mb-6 flex items-center">
+    <div className="min-h-dvh bg-[#f8f4e9] text-[#563a2a]">
+      <header className="sticky top-0 z-20 border-b border-[#eaded7]/80 bg-[#f8f4e9]/95 backdrop-blur-md">
+        <div className="mx-auto flex w-full max-w-5xl items-center gap-3 px-5 py-3.5 md:px-8 md:py-4">
+          <button
+            type="button"
+            className="brand-logo-button"
+            onClick={() => setActiveTab("agenda")}
+            aria-label="Ir a la agenda de Dulce Victoria"
+          >
+            <img src="/dulce-victoria-logo.png" alt="Dulce Victoria" />
+          </button>
+
+          <div className="ml-auto mr-1 text-right leading-none md:ml-1 md:mr-0 md:text-left">
+            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#bd807d] md:text-[10px]">
+              Mi plan semanal
+            </p>
+            <p className="mt-1.5 font-display text-[14px] italic text-[#694635] md:text-[15px]">
+              Crear · compartir · crecer
+            </p>
+          </div>
+
+          <nav className="top-nav md:ml-auto" aria-label="Navegación principal">
             <button
               type="button"
-              className="brand-logo-button"
+              className="top-nav-link"
+              aria-current={activeTab === "agenda" ? "page" : undefined}
               onClick={() => setActiveTab("agenda")}
-              aria-label="Ir a la agenda de Dulce Victoria"
             >
-              <img src="/dulce-victoria-logo.png" alt="Dulce Victoria" />
+              <Home size={16} aria-hidden="true" />
+              <span>Agenda</span>
             </button>
-            <div className="ml-auto mr-3 text-right leading-none">
-              <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#bd807d]">
-                Mi plan semanal
-              </p>
-              <p className="mt-2 font-display text-[14px] italic text-[#694635]">
-                Crear · compartir · crecer
-              </p>
-            </div>
+            <button
+              type="button"
+              className="top-nav-link"
+              aria-current={activeTab === "ideas" ? "page" : undefined}
+              onClick={() => setActiveTab("ideas")}
+            >
+              <Lightbulb size={16} aria-hidden="true" />
+              <span>Ideas</span>
+            </button>
+            <button
+              type="button"
+              className="top-nav-link"
+              aria-current={activeTab === "progress" ? "page" : undefined}
+              onClick={() => setActiveTab("progress")}
+            >
+              <BarChart3 size={16} aria-hidden="true" />
+              <span>Progreso</span>
+            </button>
+          </nav>
+
+          <div className="flex items-center gap-2.5 md:ml-2">
+            <button
+              type="button"
+              className="header-cta"
+              onClick={() => setComposerOpen(true)}
+            >
+              <Plus size={16} aria-hidden="true" />
+              <span>Agendar</span>
+            </button>
+
             <button
               type="button"
               className="icon-button relative"
@@ -231,68 +272,52 @@ export default function App() {
                 className="absolute right-2 top-2 h-2 w-2 rounded-full border-2 border-[#f8f4e9] bg-[#bd807d]"
               />
             </button>
+
+            <button
+              type="button"
+              className="profile-pill"
+              onClick={() => showToast("Tu perfil de Dulce Victoria está listo.")}
+            >
+              <img className="mini-avatar" src="/dulce-victoria-logo.png" alt="" />
+              <span>Perfil</span>
+            </button>
           </div>
+        </div>
+      </header>
 
-          {activeTab === "agenda" && (
-            <>
-              <div className="mb-5">
-                <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#b1776e]">
-                  Tu semana creativa
+      <main className="mx-auto w-full max-w-5xl px-5 pb-28 pt-6 md:px-8 md:pb-16 md:pt-10">
+        {activeTab === "agenda" && (
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-[minmax(0,1.45fr)_340px] md:grid-rows-[auto_auto_1fr] md:items-start md:gap-x-8 md:gap-y-5">
+            <div className="md:col-span-2">
+              <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#b1776e]">
+                Tu semana creativa
+              </p>
+              <h1 className="font-display text-[34px] leading-[1.05] tracking-[-0.035em] md:text-[42px]">
+                Crecer también es <span className="italic text-[#9b5962]">ser constante.</span>
+              </h1>
+            </div>
+
+            <section
+              className="progress-card md:col-start-2 md:row-start-2"
+              aria-label="Resumen semanal"
+            >
+              <div>
+                <p className="text-[12px] font-semibold text-[#74504d] md:text-[13px]">
+                  Objetivo semanal
                 </p>
-                <h1 className="font-display text-[34px] leading-[1.05] tracking-[-0.035em]">
-                  Crecer también es
-                  <br />
-                  <span className="italic text-[#9b5962]">ser constante.</span>
-                </h1>
+                <p className="mt-1 text-[11px] text-[#a07b75] md:text-[12px]">
+                  {completed} de {posts.length} contenidos publicados
+                </p>
               </div>
+              <div
+                className="progress-ring"
+                style={{ "--progress": `${progress * 3.6}deg` } as CSSProperties}
+              >
+                <span>{progress}%</span>
+              </div>
+            </section>
 
-              <section className="progress-card" aria-label="Resumen semanal">
-                <div>
-                  <p className="text-[12px] font-semibold text-[#74504d]">Objetivo semanal</p>
-                  <p className="mt-1 text-[11px] text-[#a07b75]">
-                    {completed} de {posts.length} contenidos publicados
-                  </p>
-                </div>
-                <div
-                  className="progress-ring"
-                  style={{ "--progress": `${progress * 3.6}deg` } as CSSProperties}
-                >
-                  <span>{progress}%</span>
-                </div>
-              </section>
-            </>
-          )}
-
-          {activeTab === "ideas" && (
-            <div className="mb-2">
-              <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#b1776e]">
-                Banco creativo
-              </p>
-              <h1 className="font-display text-[34px] leading-tight tracking-[-0.035em]">
-                Ideas para cuando
-                <br />
-                <span className="italic text-[#9b5962]">no sabés qué subir.</span>
-              </h1>
-            </div>
-          )}
-
-          {activeTab === "progress" && (
-            <div className="mb-2">
-              <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#b1776e]">
-                Tu avance
-              </p>
-              <h1 className="font-display text-[34px] leading-tight tracking-[-0.035em]">
-                Cada publicación
-                <br />
-                <span className="italic text-[#9b5962]">hace crecer tu marca.</span>
-              </h1>
-            </div>
-          )}
-        </header>
-
-        <div className="px-5 pb-28">
-          {activeTab === "agenda" && (
-            <>
+            <div className="md:col-start-1 md:row-start-2 md:row-span-2">
               <div className="mb-4 flex items-center justify-between border-y border-[#eaded7] py-3">
                 <button
                   type="button"
@@ -305,7 +330,7 @@ export default function App() {
                 </button>
                 <div className="flex items-center gap-2">
                   <CalendarDays size={14} className="text-[#b66f6c]" aria-hidden="true" />
-                  <span className="text-[11px] font-bold tracking-[0.14em]">
+                  <span className="text-[11px] font-bold tracking-[0.14em] md:text-[12px]">
                     {weekLabels[week]}
                   </span>
                 </div>
@@ -328,7 +353,7 @@ export default function App() {
                       <strong>{post.date}</strong>
                     </div>
                     <div className="min-w-0 flex-1 py-1">
-                      <div className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold text-[#a06c67]">
+                      <div className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold text-[#a06c67] md:text-[11px]">
                         <Clock3 size={11} aria-hidden="true" />
                         {post.time}
                         <span className="text-[#d3b9ad]" aria-hidden="true">
@@ -337,10 +362,12 @@ export default function App() {
                         <Camera size={11} aria-hidden="true" />
                         {post.channel}
                       </div>
-                      <h2 className="truncate font-display text-[18px] font-semibold leading-tight">
+                      <h2 className="truncate font-display text-[18px] font-semibold leading-tight md:text-[20px]">
                         {post.title}
                       </h2>
-                      <p className="mt-1 truncate text-[11px] text-[#9d817a]">{post.format}</p>
+                      <p className="mt-1 truncate text-[11px] text-[#9d817a] md:text-[12px]">
+                        {post.format}
+                      </p>
                     </div>
                     <button
                       type="button"
@@ -367,43 +394,70 @@ export default function App() {
                 <Plus size={19} aria-hidden="true" />
                 Agendar contenido
               </button>
+            </div>
 
-              <div className="quote">
-                <Sparkles size={15} className="shrink-0 text-[#c26c66]" aria-hidden="true" />
-                <p>
-                  No tiene que ser perfecto, <strong>tiene que estar publicado.</strong>
-                </p>
-              </div>
-            </>
-          )}
+            <div className="quote md:col-start-2 md:row-start-3 md:mt-0 md:rounded-[18px] md:border md:border-[#eaded7] md:bg-[#fbf8ef] md:p-5">
+              <Sparkles size={15} className="shrink-0 text-[#c26c66]" aria-hidden="true" />
+              <p>
+                No tiene que ser perfecto, <strong>tiene que estar publicado.</strong>
+              </p>
+            </div>
+          </div>
+        )}
 
-          {activeTab === "ideas" && (
-            <div className="mt-4 space-y-3">
+        {activeTab === "ideas" && (
+          <div>
+            <div>
+              <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#b1776e]">
+                Banco creativo
+              </p>
+              <h1 className="font-display text-[34px] leading-tight tracking-[-0.035em] md:text-[42px]">
+                Ideas para cuando{" "}
+                <span className="italic text-[#9b5962]">no sabés qué subir.</span>
+              </h1>
+            </div>
+
+            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
               {ideas.map(([title, description], index) => (
                 <article className="idea-card" key={title}>
                   <div className="idea-number">0{index + 1}</div>
                   <div>
                     <h2 className="font-display text-xl font-semibold">{title}</h2>
-                    <p className="mt-1 text-[12px] leading-relaxed text-[#8e6f69]">{description}</p>
+                    <p className="mt-1 text-[12px] leading-relaxed text-[#8e6f69] md:text-[13px]">
+                      {description}
+                    </p>
                   </div>
                 </article>
               ))}
-              <button
-                type="button"
-                className="new-post-button"
-                onClick={() => {
-                  setActiveTab("agenda");
-                  setComposerOpen(true);
-                }}
-              >
-                <Plus size={19} aria-hidden="true" />
-                Convertir idea en contenido
-              </button>
             </div>
-          )}
 
-          {activeTab === "progress" && (
-            <div className="mt-4">
+            <button
+              type="button"
+              className="new-post-button md:mt-6 md:max-w-xs"
+              onClick={() => {
+                setActiveTab("agenda");
+                setComposerOpen(true);
+              }}
+            >
+              <Plus size={19} aria-hidden="true" />
+              Convertir idea en contenido
+            </button>
+          </div>
+        )}
+
+        {activeTab === "progress" && (
+          <div>
+            <div>
+              <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#b1776e]">
+                Tu avance
+              </p>
+              <h1 className="font-display text-[34px] leading-tight tracking-[-0.035em] md:text-[42px]">
+                Cada publicación{" "}
+                <span className="italic text-[#9b5962]">hace crecer tu marca.</span>
+              </h1>
+            </div>
+
+            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 md:items-stretch md:gap-6">
               <section className="streak-card" aria-label="Racha de publicaciones">
                 <Heart size={22} fill="currentColor" aria-hidden="true" />
                 <strong className="font-display text-5xl">{completed}</strong>
@@ -417,71 +471,74 @@ export default function App() {
                   />
                 </div>
               </section>
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                <div className="stat-card">
-                  <strong>{posts.length}</strong>
-                  <span>planificadas</span>
+
+              <div className="flex flex-col justify-between gap-4">
+                <div className="grid grid-cols-2 gap-3 md:gap-4">
+                  <div className="stat-card">
+                    <strong>{posts.length}</strong>
+                    <span>planificadas</span>
+                  </div>
+                  <div className="stat-card">
+                    <strong>{posts.length - completed}</strong>
+                    <span>por publicar</span>
+                  </div>
                 </div>
-                <div className="stat-card">
-                  <strong>{posts.length - completed}</strong>
-                  <span>por publicar</span>
-                </div>
+                <p className="mt-2 text-center font-display text-lg italic text-[#8c605d] md:mt-0 md:rounded-[18px] md:border md:border-[#eaded7] md:bg-[#fbf8ef] md:p-5">
+                  “La constancia le gana a la inspiración.”
+                </p>
               </div>
-              <p className="mt-5 text-center font-display text-lg italic text-[#8c605d]">
-                “La constancia le gana a la inspiración.”
-              </p>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+      </main>
 
-        <nav className="bottom-nav" aria-label="Principal">
-          <button
-            type="button"
-            className={activeTab === "agenda" ? "active" : ""}
-            aria-current={activeTab === "agenda" ? "page" : undefined}
-            onClick={() => setActiveTab("agenda")}
-          >
-            <Home size={20} aria-hidden="true" />
-            <span>Agenda</span>
-          </button>
-          <button
-            type="button"
-            className={activeTab === "ideas" ? "active" : ""}
-            aria-current={activeTab === "ideas" ? "page" : undefined}
-            onClick={() => setActiveTab("ideas")}
-          >
-            <Lightbulb size={20} aria-hidden="true" />
-            <span>Ideas</span>
-          </button>
-          <button
-            type="button"
-            className="nav-add"
-            onClick={() => setComposerOpen(true)}
-            aria-label="Agendar contenido"
-          >
-            <Plus size={26} aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            className={activeTab === "progress" ? "active" : ""}
-            aria-current={activeTab === "progress" ? "page" : undefined}
-            onClick={() => setActiveTab("progress")}
-          >
-            <BarChart3 size={20} aria-hidden="true" />
-            <span>Progreso</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => showToast("Tu perfil de Dulce Victoria está listo.")}
-          >
-            <img className="mini-avatar" src="/dulce-victoria-logo.png" alt="" />
-            <span>Perfil</span>
-          </button>
-        </nav>
+      <nav className="bottom-nav" aria-label="Navegación móvil">
+        <button
+          type="button"
+          className={activeTab === "agenda" ? "active" : ""}
+          aria-current={activeTab === "agenda" ? "page" : undefined}
+          onClick={() => setActiveTab("agenda")}
+        >
+          <Home size={20} aria-hidden="true" />
+          <span>Agenda</span>
+        </button>
+        <button
+          type="button"
+          className={activeTab === "ideas" ? "active" : ""}
+          aria-current={activeTab === "ideas" ? "page" : undefined}
+          onClick={() => setActiveTab("ideas")}
+        >
+          <Lightbulb size={20} aria-hidden="true" />
+          <span>Ideas</span>
+        </button>
+        <button
+          type="button"
+          className="nav-add"
+          onClick={() => setComposerOpen(true)}
+          aria-label="Agendar contenido"
+        >
+          <Plus size={26} aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          className={activeTab === "progress" ? "active" : ""}
+          aria-current={activeTab === "progress" ? "page" : undefined}
+          onClick={() => setActiveTab("progress")}
+        >
+          <BarChart3 size={20} aria-hidden="true" />
+          <span>Progreso</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => showToast("Tu perfil de Dulce Victoria está listo.")}
+        >
+          <img className="mini-avatar" src="/dulce-victoria-logo.png" alt="" />
+          <span>Perfil</span>
+        </button>
+      </nav>
 
-        <div role="status" aria-live="polite" className={notice ? "toast" : "sr-only"}>
-          {notice}
-        </div>
+      <div role="status" aria-live="polite" className={notice ? "toast" : "sr-only"}>
+        {notice}
       </div>
 
       <dialog
@@ -564,6 +621,6 @@ export default function App() {
           </form>
         </div>
       </dialog>
-    </main>
+    </div>
   );
 }
