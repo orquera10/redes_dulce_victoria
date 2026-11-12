@@ -1,5 +1,6 @@
 export type BgStyle = "bakery" | "botanical" | "waves" | "hearts" | "clean";
 export type TextFrameStyle = "brush" | "scalloped" | "heart-label" | "ribbon" | "none";
+export type SeparatorStyle = "none" | "leaves-heart" | "dots-heart" | "swirl-heart";
 
 export type PastelPalette = {
   id: string;
@@ -224,49 +225,83 @@ export function drawSparkle(
   ctx.restore();
 }
 
-export function drawDelicateSprig(
+// Solid botanical sprig (adapted from user's first botanical reference)
+export const FILLED_SPRIG_STEM = "M0,44 C0,14 8,-14 26,-42";
+export const FILLED_SPRIG_LEAVES = [
+  "M3,26 C15,24 23,14 25,6 C15,8 7,16 3,26 Z",
+  "M1,14 C-11,10 -19,0 -20,-10 C-10,-6 -2,4 1,14 Z",
+  "M7,4 C19,2 28,-8 30,-18 C19,-16 11,-6 7,4 Z",
+  "M8,-10 C-4,-14 -11,-24 -12,-34 C-2,-30 5,-20 8,-10 Z",
+  "M15,-20 C26,-22 34,-31 36,-40 C26,-38 19,-29 15,-20 Z",
+  "M22,-34 C14,-40 12,-50 14,-58 C22,-51 24,-42 22,-34 Z",
+  "M26,-42 C32,-50 38,-56 44,-60 C41,-50 34,-44 26,-42 Z",
+];
+
+// Outlined 3-sprig cluster (adapted from user's second botanical reference)
+export const CLUSTER_SPRIGS: Array<{ x: number; y: number; rot: number; scale: number }> = [
+  { x: -34, y: 26, rot: -48, scale: 0.72 },
+  { x: 0, y: 28, rot: -12, scale: 0.96 },
+  { x: 34, y: 26, rot: 26, scale: 0.85 },
+];
+
+export function drawFilledBotanicalSprig(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
   angleDeg: number,
   scale: number,
-  stroke: string,
-  fill: string
+  color: string
 ) {
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate((angleDeg * Math.PI) / 180);
   ctx.scale(scale, scale);
-
-  ctx.strokeStyle = stroke;
-  ctx.lineWidth = 2.6;
+  ctx.globalAlpha = 0.68;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 4.2;
   ctx.lineCap = "round";
-  ctx.beginPath();
-  ctx.moveTo(0, 0);
-  ctx.quadraticCurveTo(42, -52, 92, -110);
-  ctx.stroke();
+  ctx.stroke(new Path2D(FILLED_SPRIG_STEM));
+  ctx.fillStyle = color;
+  for (const d of FILLED_SPRIG_LEAVES) {
+    ctx.fill(new Path2D(d));
+  }
+  ctx.restore();
+}
 
-  const leaves: Array<[number, number, number]> = [
-    [22, -26, -42],
-    [32, -38, 34],
-    [48, -58, -38],
-    [58, -70, 32],
-    [74, -90, -34],
-    [92, -110, 4],
-  ];
-  for (const [lx, ly, rot] of leaves) {
+export function drawOutlinedBotanicalCluster(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  scale: number,
+  stroke: string,
+  fill: string,
+  accent: string
+) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
+  ctx.globalAlpha = 0.82;
+  for (const sp of CLUSTER_SPRIGS) {
     ctx.save();
-    ctx.translate(lx, ly);
-    ctx.rotate((rot * Math.PI) / 180);
-    ctx.fillStyle = fill;
+    ctx.translate(sp.x, sp.y);
+    ctx.rotate((sp.rot * Math.PI) / 180);
+    ctx.scale(sp.scale, sp.scale);
     ctx.strokeStyle = stroke;
-    ctx.lineWidth = 2.2;
-    ctx.beginPath();
-    ctx.ellipse(0, -11, 6.5, 13, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
+    ctx.lineWidth = 3.2;
+    ctx.lineCap = "round";
+    ctx.stroke(new Path2D(FILLED_SPRIG_STEM));
+    ctx.fillStyle = fill;
+    ctx.lineWidth = 2.6;
+    for (const d of FILLED_SPRIG_LEAVES) {
+      const p = new Path2D(d);
+      ctx.fill(p);
+      ctx.stroke(p);
+    }
     ctx.restore();
   }
+  drawHeart(ctx, 22, -46, 20, accent, accent);
+  drawSparkle(ctx, -56, -34, 11, stroke);
+  drawSparkle(ctx, -40, -14, 8, stroke);
   ctx.restore();
 }
 
@@ -356,13 +391,12 @@ export function drawStoryBackgroundCanvas(
   }
 
   if (bgStyle === "botanical") {
-    drawDelicateSprig(ctx, 26, 285, 8, 1.15, palette.text, palette.wave);
-    drawDelicateSprig(ctx, STORY_W - 26, 285, -98, 1.12, palette.text, palette.wave);
-    drawDelicateSprig(ctx, 30, STORY_H - 26, 12, 1.15, palette.text, palette.wave);
-    drawDelicateSprig(ctx, STORY_W - 30, STORY_H - 26, -104, 1.15, palette.text, palette.wave);
-    for (const [sx, sy, sr] of SPARKLE_POINTS) {
-      drawSparkle(ctx, sx, sy, sr, palette.accent);
-    }
+    drawFilledBotanicalSprig(ctx, 92, 148, 18, 1.55, palette.text);
+    drawFilledBotanicalSprig(ctx, STORY_W - 92, 148, -18, 1.55, palette.text);
+    drawOutlinedBotanicalCluster(ctx, 118, STORY_H - 135, 1.35, palette.text, palette.bg, palette.accent);
+    drawOutlinedBotanicalCluster(ctx, STORY_W - 118, STORY_H - 135, 1.35, palette.text, palette.bg, palette.accent);
+    drawSparkle(ctx, 210, 96, 12, palette.accent);
+    drawSparkle(ctx, STORY_W - 210, 96, 12, palette.accent);
     drawHeart(ctx, 265, 195, 22, palette.accent);
     drawHeart(ctx, STORY_W - 265, 195, 22, palette.accent);
     return;
@@ -523,6 +557,101 @@ export function drawTextFrameCanvas(
     ctx.strokeStyle = palette.accent;
     ctx.lineWidth = 3;
     ctx.stroke();
+    ctx.restore();
+  }
+}
+
+export function drawSeparatorCanvas(
+  ctx: CanvasRenderingContext2D,
+  sep: SeparatorStyle,
+  cx: number,
+  cy: number,
+  scaleFactor: number,
+  palette: PastelPalette
+) {
+  if (sep === "none") return;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(scaleFactor, scaleFactor);
+
+  if (sep === "leaves-heart") {
+    // Outward horizontal leaf sprigs flanking central outlined heart
+    drawHeart(ctx, 0, -14, 28, palette.accent, palette.wave);
+    drawHeart(ctx, 0, -14, 28, palette.accent);
+
+    const drawSideSprig = (dir: 1 | -1) => {
+      ctx.save();
+      ctx.scale(dir, 1);
+      ctx.strokeStyle = palette.text;
+      ctx.fillStyle = palette.bg;
+      ctx.lineWidth = 3.2;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(42, 0);
+      ctx.lineTo(155, 0);
+      ctx.stroke();
+      const leaves: Array<[number, number, number]> = [
+        [68, 0, -38],
+        [72, 0, 38],
+        [102, 0, -34],
+        [106, 0, 34],
+        [136, 0, -28],
+        [140, 0, 28],
+        [168, 0, 0],
+      ];
+      for (const [lx, ly, rot] of leaves) {
+        ctx.save();
+        ctx.translate(lx, ly);
+        ctx.rotate((rot * Math.PI) / 180);
+        ctx.beginPath();
+        ctx.ellipse(12, 0, 12, 5.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+      ctx.restore();
+    };
+    drawSideSprig(-1);
+    drawSideSprig(1);
+    ctx.restore();
+    return;
+  }
+
+  if (sep === "dots-heart") {
+    // Horizontal lines + dots + central outlined heart
+    ctx.strokeStyle = palette.text;
+    ctx.lineWidth = 4;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(-190, 0);
+    ctx.lineTo(-68, 0);
+    ctx.moveTo(68, 0);
+    ctx.lineTo(190, 0);
+    ctx.stroke();
+
+    ctx.fillStyle = palette.text;
+    ctx.beginPath();
+    ctx.arc(-48, 0, 5.5, 0, Math.PI * 2);
+    ctx.arc(48, 0, 5.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    drawHeart(ctx, 0, -14, 28, palette.accent, palette.wave);
+    drawHeart(ctx, 0, -14, 28, palette.accent);
+    ctx.restore();
+    return;
+  }
+
+  if (sep === "swirl-heart") {
+    // Continuous flowing ribbon flourish looping into a central heart
+    ctx.strokeStyle = palette.accent;
+    ctx.lineWidth = 4.2;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.stroke(
+      new Path2D(
+        "M-220,12 C-150,-14 -80,28 -18,12 C8,5 22,-18 8,-28 C-2,-34 -12,-24 -2,-14 C10,-24 0,-34 -10,-28 C-24,-18 -10,5 18,12 C80,28 150,-14 220,12"
+      )
+    );
     ctx.restore();
   }
 }

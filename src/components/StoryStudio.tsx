@@ -22,15 +22,20 @@ import {
 import {
   BAKERY_ICONS,
   BAKERY_PLACEMENTS,
+  CLUSTER_SPRIGS,
+  FILLED_SPRIG_LEAVES,
+  FILLED_SPRIG_STEM,
   HEART_POINTS_BAKERY,
   PASTEL_PALETTES,
   SPARKLE_POINTS,
   STORY_H,
   STORY_W,
+  drawSeparatorCanvas,
   drawStoryBackgroundCanvas,
   drawTextFrameCanvas,
   type BgStyle,
   type PastelPalette,
+  type SeparatorStyle,
   type TextFrameStyle,
 } from "./storyArt";
 
@@ -113,6 +118,7 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
   const [footerText, setFooterText] = useState("");
   const [showWhatsappIcon, setShowWhatsappIcon] = useState(true);
   const [textFrame, setTextFrame] = useState<TextFrameStyle>("scalloped");
+  const [separatorStyle, setSeparatorStyle] = useState<SeparatorStyle>("leaves-heart");
   const [textPos, setTextPos] = useState<Point>({ x: 0.5, y: 0.205 });
   const [textScalePct, setTextScalePct] = useState(100);
 
@@ -656,6 +662,8 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
         ctx.fillText(titleScript.trim(), tx, ty + (titleTop.trim() ? 48 * scaleFactor : 0));
       }
       ctx.restore();
+      const sepY = ty + (textFrame === "none" ? 112 : 148) * scaleFactor;
+      drawSeparatorCanvas(ctx, separatorStyle, tx, sepY, scaleFactor, palette);
     }
 
     // Optional bottom footer badge
@@ -875,27 +883,58 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
             {bgStyle === "botanical" && (
               <g>
                 {[
-                  { x: 26, y: 285, rot: 8, scale: 1.15 },
-                  { x: 1054, y: 285, rot: -98, scale: 1.12 },
-                  { x: 30, y: 1894, rot: 12, scale: 1.15 },
-                  { x: 1050, y: 1894, rot: -104, scale: 1.15 },
+                  { x: 92, y: 148, rot: 18 },
+                  { x: 988, y: 148, rot: -18 },
                 ].map((sp, idx) => (
                   <g
-                    key={idx}
-                    transform={`translate(${sp.x} ${sp.y}) rotate(${sp.rot}) scale(${sp.scale})`}
-                    stroke={palette.text}
-                    fill={palette.wave}
+                    key={`top-sp-${idx}`}
+                    transform={`translate(${sp.x} ${sp.y}) rotate(${sp.rot}) scale(1.55)`}
+                    opacity="0.68"
                   >
-                    <path d="M0,0 Q42,-52 92,-110" fill="none" strokeWidth="2.6" strokeLinecap="round" />
-                    <ellipse cx="0" cy="-11" rx="6.5" ry="13" transform="translate(22 -26) rotate(-42)" strokeWidth="2.2" />
-                    <ellipse cx="0" cy="-11" rx="6.5" ry="13" transform="translate(32 -38) rotate(34)" strokeWidth="2.2" />
-                    <ellipse cx="0" cy="-11" rx="6.5" ry="13" transform="translate(48 -58) rotate(-38)" strokeWidth="2.2" />
-                    <ellipse cx="0" cy="-11" rx="6.5" ry="13" transform="translate(58 -70) rotate(32)" strokeWidth="2.2" />
-                    <ellipse cx="0" cy="-11" rx="6.5" ry="13" transform="translate(74 -90) rotate(-34)" strokeWidth="2.2" />
-                    <ellipse cx="0" cy="-11" rx="6.5" ry="13" transform="translate(92 -110) rotate(4)" strokeWidth="2.2" />
+                    <path d={FILLED_SPRIG_STEM} fill="none" stroke={palette.text} strokeWidth="4.2" strokeLinecap="round" />
+                    {FILLED_SPRIG_LEAVES.map((d, lIdx) => (
+                      <path key={lIdx} d={d} fill={palette.text} />
+                    ))}
                   </g>
                 ))}
-                {SPARKLE_POINTS.map(([sx, sy, sr], idx) => (
+                {[118, 962].map((cx, cIdx) => (
+                  <g key={`cl-${cIdx}`} transform={`translate(${cx} 1785) scale(1.35)`} opacity="0.82">
+                    {CLUSTER_SPRIGS.map((sp, sIdx) => (
+                      <g
+                        key={sIdx}
+                        transform={`translate(${sp.x} ${sp.y}) rotate(${sp.rot}) scale(${sp.scale})`}
+                      >
+                        <path d={FILLED_SPRIG_STEM} fill="none" stroke={palette.text} strokeWidth="3.2" strokeLinecap="round" />
+                        {FILLED_SPRIG_LEAVES.map((d, lIdx) => (
+                          <path key={lIdx} d={d} fill={palette.bg} stroke={palette.text} strokeWidth="2.6" />
+                        ))}
+                      </g>
+                    ))}
+                    <path
+                      transform="translate(22 -46)"
+                      d="M0,6 C11,-5 19,7 0,19 C-19,7 -11,-5 0,6 Z"
+                      fill={palette.accent}
+                    />
+                    <path
+                      transform="translate(-56 -34)"
+                      d="M0,-11 Q0,0 11,0 Q0,0 0,11 Q0,0 -11,0 Q0,0 0,-11 Z"
+                      fill="none"
+                      stroke={palette.text}
+                      strokeWidth="2.6"
+                    />
+                    <path
+                      transform="translate(-40 -14)"
+                      d="M0,-8 Q0,0 8,0 Q0,0 0,8 Q0,0 -8,0 Q0,0 0,-8 Z"
+                      fill="none"
+                      stroke={palette.text}
+                      strokeWidth="2.6"
+                    />
+                  </g>
+                ))}
+                {[
+                  [210, 96, 12],
+                  [870, 96, 12],
+                ].map(([sx, sy, sr], idx) => (
                   <path
                     key={`bsp-${idx}`}
                     transform={`translate(${sx} ${sy})`}
@@ -1175,6 +1214,65 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
                   {titleScript}
                 </span>
               )}
+              {separatorStyle !== "none" && (
+                <svg
+                  className="pointer-events-none absolute left-1/2 -translate-x-1/2 overflow-visible"
+                  style={{
+                    top: textFrame === "none" ? "106%" : "118%",
+                    width: `${Math.round(460 * uiScale)}px`,
+                    height: `${Math.round(52 * uiScale)}px`,
+                  }}
+                  viewBox="-230 -36 460 66"
+                  aria-hidden="true"
+                >
+                  {separatorStyle === "leaves-heart" && (
+                    <g>
+                      <path
+                        d="M0,-6 C15,-21 26,-4 0,13 C-26,-4 -15,-21 0,-6 Z"
+                        fill={palette.wave}
+                        stroke={palette.accent}
+                        strokeWidth="3.5"
+                      />
+                      {[-1, 1].map((dir) => (
+                        <g key={dir} transform={`scale(${dir} 1)`} stroke={palette.text} fill={palette.bg} strokeWidth="3" strokeLinecap="round">
+                          <line x1="42" y1="0" x2="155" y2="0" />
+                          <ellipse cx="12" cy="0" rx="12" ry="5.5" transform="translate(68 0) rotate(-38)" />
+                          <ellipse cx="12" cy="0" rx="12" ry="5.5" transform="translate(72 0) rotate(38)" />
+                          <ellipse cx="12" cy="0" rx="12" ry="5.5" transform="translate(102 0) rotate(-34)" />
+                          <ellipse cx="12" cy="0" rx="12" ry="5.5" transform="translate(106 0) rotate(34)" />
+                          <ellipse cx="12" cy="0" rx="12" ry="5.5" transform="translate(136 0) rotate(-28)" />
+                          <ellipse cx="12" cy="0" rx="12" ry="5.5" transform="translate(140 0) rotate(28)" />
+                          <ellipse cx="12" cy="0" rx="12" ry="5.5" transform="translate(168 0)" />
+                        </g>
+                      ))}
+                    </g>
+                  )}
+                  {separatorStyle === "dots-heart" && (
+                    <g>
+                      <line x1="-190" y1="0" x2="-68" y2="0" stroke={palette.text} strokeWidth="4" strokeLinecap="round" />
+                      <line x1="68" y1="0" x2="190" y2="0" stroke={palette.text} strokeWidth="4" strokeLinecap="round" />
+                      <circle cx="-48" cy="0" r="5.5" fill={palette.text} />
+                      <circle cx="48" cy="0" r="5.5" fill={palette.text} />
+                      <path
+                        d="M0,-6 C15,-21 26,-4 0,13 C-26,-4 -15,-21 0,-6 Z"
+                        fill={palette.wave}
+                        stroke={palette.accent}
+                        strokeWidth="3.5"
+                      />
+                    </g>
+                  )}
+                  {separatorStyle === "swirl-heart" && (
+                    <path
+                      d="M-220,12 C-150,-14 -80,28 -18,12 C8,5 22,-18 8,-28 C-2,-34 -12,-24 -2,-14 C10,-24 0,-34 -10,-28 C-24,-18 -10,5 18,12 C80,28 150,-14 220,12"
+                      fill="none"
+                      stroke={palette.accent}
+                      strokeWidth="4.2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  )}
+                </svg>
+              )}
             </button>
           )}
 
@@ -1407,6 +1505,27 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
                   className="studio-chip"
                   aria-pressed={textFrame === id}
                   onClick={() => setTextFrame(id)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <p className="studio-label pt-1">Separador</p>
+            <div className="flex flex-wrap gap-1.5">
+              {(
+                [
+                  ["leaves-heart", "Ramitas ♥"],
+                  ["dots-heart", "Líneas ♥"],
+                  ["swirl-heart", "Firulete ♥"],
+                  ["none", "Sin separador"],
+                ] as [SeparatorStyle, string][]
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  className="studio-chip"
+                  aria-pressed={separatorStyle === id}
+                  onClick={() => setSeparatorStyle(id)}
                 >
                   {label}
                 </button>
