@@ -10,11 +10,13 @@ import {
   Clock3,
   Heart,
   Home,
+  ImagePlus,
   Lightbulb,
   Plus,
   Sparkles,
   X,
 } from "lucide-react";
+import { LogoStudio } from "./components/LogoStudio";
 
 type Post = {
   id: number;
@@ -28,7 +30,7 @@ type Post = {
   done: boolean;
 };
 
-type Tab = "agenda" | "ideas" | "progress";
+type Tab = "agenda" | "ideas" | "studio" | "progress";
 
 const STORAGE_KEY = "dulce_victoria_posts_v1";
 
@@ -242,6 +244,15 @@ export default function App() {
             <button
               type="button"
               className="top-nav-link"
+              aria-current={activeTab === "studio" ? "page" : undefined}
+              onClick={() => setActiveTab("studio")}
+            >
+              <ImagePlus size={16} aria-hidden="true" />
+              <span>Logo 1:1</span>
+            </button>
+            <button
+              type="button"
+              className="top-nav-link"
               aria-current={activeTab === "progress" ? "page" : undefined}
               onClick={() => setActiveTab("progress")}
             >
@@ -445,6 +456,8 @@ export default function App() {
           </div>
         )}
 
+        {activeTab === "studio" && <LogoStudio onNotify={showToast} />}
+
         {activeTab === "progress" && (
           <div>
             <div>
@@ -521,19 +534,21 @@ export default function App() {
         </button>
         <button
           type="button"
+          className={activeTab === "studio" ? "active" : ""}
+          aria-current={activeTab === "studio" ? "page" : undefined}
+          onClick={() => setActiveTab("studio")}
+        >
+          <ImagePlus size={20} aria-hidden="true" />
+          <span>Logo 1:1</span>
+        </button>
+        <button
+          type="button"
           className={activeTab === "progress" ? "active" : ""}
           aria-current={activeTab === "progress" ? "page" : undefined}
           onClick={() => setActiveTab("progress")}
         >
           <BarChart3 size={20} aria-hidden="true" />
           <span>Progreso</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => showToast("Tu perfil de Dulce Victoria está listo.")}
-        >
-          <img className="mini-avatar" src="/dulce-victoria-logo.png" alt="" />
-          <span>Perfil</span>
         </button>
       </nav>
 
