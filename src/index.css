@@ -1075,10 +1075,13 @@
 .story-footer-pill {
   position: absolute;
   left: 50%;
-  bottom: 5.5%;
+  bottom: 2.2%;
   transform: translateX(-50%);
   z-index: 6;
-  padding: 6px 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.48em;
+  padding: 0.34em 1.05em;
   border-radius: 999px;
   background: #fffefa;
   border: 1.5px solid #d7b7ae;
@@ -1086,6 +1089,22 @@
   font-weight: 700;
   white-space: nowrap;
   pointer-events: none;
+  box-shadow: 0 4px 12px rgba(73, 43, 38, 0.14);
+}
+
+.story-footer-pill.has-wp {
+  padding-left: 0.42em;
+}
+
+.story-wp-badge {
+  width: 1.5em;
+  height: 1.5em;
+  border-radius: 50%;
+  background: #bd807d;
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  flex: none;
 }
 
 .story-input {

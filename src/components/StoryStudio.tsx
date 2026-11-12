@@ -226,6 +226,7 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
   const [titleTop, setTitleTop] = useState("Pedidos del día");
   const [titleScript, setTitleScript] = useState("de hoy");
   const [footerText, setFooterText] = useState("");
+  const [showWhatsappIcon, setShowWhatsappIcon] = useState(true);
   const [hasBrushBg, setHasBrushBg] = useState(true);
   const [textPos, setTextPos] = useState<Point>({ x: 0.5, y: 0.205 });
   const [textScalePct, setTextScalePct] = useState(100);
@@ -884,23 +885,84 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
     // Optional bottom footer badge
     if (footerText.trim()) {
       ctx.save();
-      const pillW = 760;
-      const pillH = 92;
+      const label = footerText.trim();
+      ctx.font = '700 36px "DM Sans", sans-serif';
+      const textW = ctx.measureText(label).width;
+      const iconGap = showWhatsappIcon ? 74 : 0;
+      const pillW = Math.min(920, Math.max(460, Math.round(textW + iconGap + 96)));
+      const pillH = 82;
       const px = (STORY_W - pillW) / 2;
-      const py = STORY_H - 180;
+      const py = STORY_H - 126;
+
+      ctx.shadowColor = "rgba(73, 43, 38, 0.14)";
+      ctx.shadowBlur = 18;
+      ctx.shadowOffsetY = 6;
       ctx.fillStyle = "#fffefa";
       ctx.strokeStyle = "#d7b7ae";
-      ctx.lineWidth = 4;
+      ctx.lineWidth = 3.5;
       ctx.beginPath();
-      ctx.roundRect(px, py, pillW, pillH, 46);
+      ctx.roundRect(px, py, pillW, pillH, pillH / 2);
       ctx.fill();
+      ctx.shadowColor = "transparent";
       ctx.stroke();
 
-      ctx.fillStyle = "#563a2a";
-      ctx.font = '700 36px "DM Sans", sans-serif';
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(footerText.trim(), STORY_W / 2, py + pillH / 2);
+      const cy = py + pillH / 2;
+      if (showWhatsappIcon) {
+        const contentW = 54 + 18 + textW;
+        const startX = (STORY_W - Math.min(contentW, pillW - 56)) / 2;
+        const iconCx = startX + 27;
+        const r = 27;
+
+        // Dusty-rose circular WhatsApp badge
+        ctx.fillStyle = "#bd807d";
+        ctx.beginPath();
+        ctx.arc(iconCx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Crisp white WhatsApp speech bubble + handset
+        ctx.save();
+        ctx.translate(iconCx, cy);
+        const s = r / 24;
+        ctx.scale(s, s);
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 2.6;
+        ctx.lineJoin = "round";
+        ctx.beginPath();
+        ctx.arc(0, -0.4, 11.4, Math.PI * 0.72, Math.PI * 2.52);
+        ctx.lineTo(-11.8, 11.2);
+        ctx.closePath();
+        ctx.stroke();
+
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.moveTo(-4.2, -5.6);
+        ctx.bezierCurveTo(-5.4, -5.6, -6.2, -4.6, -6.1, -3.2);
+        ctx.bezierCurveTo(-5.9, 1.2, -1.2, 5.8, 3.3, 6.0);
+        ctx.bezierCurveTo(4.7, 6.1, 5.7, 5.3, 5.7, 4.1);
+        ctx.lineTo(5.5, 2.7);
+        ctx.bezierCurveTo(5.3, 2.1, 4.7, 1.8, 4.0, 1.6);
+        ctx.lineTo(2.4, 1.1);
+        ctx.bezierCurveTo(1.8, 0.9, 1.3, 1.1, 0.9, 1.6);
+        ctx.lineTo(0.2, 2.3);
+        ctx.bezierCurveTo(-1.1, 1.6, -2.0, 0.7, -2.7, -0.6);
+        ctx.lineTo(-2.0, -1.3);
+        ctx.bezierCurveTo(-1.5, -1.7, -1.3, -2.2, -1.5, -2.8);
+        ctx.lineTo(-2.0, -4.4);
+        ctx.bezierCurveTo(-2.2, -5.1, -2.5, -5.6, -3.1, -5.6);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+
+        ctx.fillStyle = "#563a2a";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText(label, startX + 72, cy + 1, pillW - 130);
+      } else {
+        ctx.fillStyle = "#563a2a";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(label, STORY_W / 2, cy + 1, pillW - 72);
+      }
       ctx.restore();
     }
 
@@ -1263,10 +1325,26 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
           {/* Optional Footer Badge */}
           {footerText.trim() && (
             <div
-              className="story-footer-pill"
+              className={`story-footer-pill ${showWhatsappIcon ? "has-wp" : ""}`}
               style={{ fontSize: `${Math.max(10, Math.round(36 * uiScale))}px` }}
             >
-              {footerText}
+              {showWhatsappIcon && (
+                <span className="story-wp-badge" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" className="h-[62%] w-[62%]" fill="none">
+                    <path
+                      d="M12 3.2a8.6 8.6 0 0 0-7.45 12.9L3.5 20.5l4.55-1.02A8.6 8.6 0 1 0 12 3.2Z"
+                      stroke="#ffffff"
+                      strokeWidth="2"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M9.45 8.7c-.2-.45-.4-.46-.6-.47h-.5c-.18 0-.47.07-.72.34-.25.27-.95.92-.95 2.25s.97 2.6 1.1 2.78c.14.18 1.88 3 4.64 4.08 2.29.9 2.75.72 3.25.67.5-.05 1.6-.65 1.82-1.28.23-.63.23-1.17.16-1.28-.07-.11-.25-.18-.52-.31-.27-.14-1.6-.79-1.85-.88-.25-.09-.43-.14-.6.13-.18.27-.7.88-.86 1.06-.16.18-.32.2-.59.07-.27-.14-1.15-.42-2.18-1.35-.81-.72-1.35-1.61-1.51-1.88-.16-.27-.02-.42.12-.55.12-.12.27-.32.4-.48.14-.16.18-.27.27-.45.09-.18.05-.34-.02-.48-.07-.13-.59-1.45-.82-1.97Z"
+                      fill="#ffffff"
+                    />
+                  </svg>
+                </span>
+              )}
+              <span>{footerText}</span>
             </div>
           )}
         </div>
@@ -1505,9 +1583,19 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
           </div>
 
           <div>
-            <label htmlFor="story-footer-text" className="studio-label mb-1">
-              Pie / WhatsApp / Precio (opcional)
-            </label>
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <label htmlFor="story-footer-text" className="studio-label">
+                Pie / WhatsApp / Precio (opcional)
+              </label>
+              <button
+                type="button"
+                aria-pressed={showWhatsappIcon}
+                className={`studio-chip ${showWhatsappIcon ? "is-active" : ""}`}
+                onClick={() => setShowWhatsappIcon((prev) => !prev)}
+              >
+                Ícono WhatsApp
+              </button>
+            </div>
             <input
               id="story-footer-text"
               type="text"
