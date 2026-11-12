@@ -1,5 +1,6 @@
 import {
   type ChangeEvent,
+  type DragEvent,
   type KeyboardEvent,
   type PointerEvent as ReactPointerEvent,
   useEffect,
@@ -47,6 +48,7 @@ export function LogoStudio({ onNotify }: LogoStudioProps) {
   const [logoOpacityPct, setLogoOpacityPct] = useState(100);
 
   const [draggingTarget, setDraggingTarget] = useState<"image" | "logo" | null>(null);
+  const [isFileDragOver, setIsFileDragOver] = useState(false);
   const [stagePixels, setStagePixels] = useState(360);
   const [liveStatus, setLiveStatus] = useState("");
   const [isExporting, setIsExporting] = useState(false);
@@ -54,6 +56,7 @@ export function LogoStudio({ onNotify }: LogoStudioProps) {
   const stageRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadedImgRef = useRef<HTMLImageElement | null>(null);
+  const fileDragDepthRef = useRef(0);
 
   const dragOriginRef = useRef<{
     target: "image" | "logo";
@@ -108,9 +111,21 @@ export function LogoStudio({ onNotify }: LogoStudioProps) {
     };
   };
 
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  useEffect(() => {
+    const preventFileNavigation = (event: globalThis.DragEvent) => {
+      if (event.dataTransfer?.types?.includes("Files")) {
+        event.preventDefault();
+      }
+    };
+    window.addEventListener("dragover", preventFileNavigation);
+    window.addEventListener("drop", preventFileNavigation);
+    return () => {
+      window.removeEventListener("dragover", preventFileNavigation);
+      window.removeEventListener("drop", preventFileNavigation);
+    };
+  }, []);
+
+  const loadImageFile = (file: File) => {
     if (!file.type.startsWith("image/")) {
       onNotify("Seleccioná un archivo de imagen (JPG, PNG o WebP).");
       return;
@@ -132,7 +147,49 @@ export function LogoStudio({ onNotify }: LogoStudioProps) {
       onNotify("No pudimos leer esa imagen. Probá con otro archivo.");
     };
     probe.src = nextUrl;
+  };
+
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    loadImageFile(file);
     event.target.value = "";
+  };
+
+  const hasDraggedFiles = (event: DragEvent<HTMLElement>) =>
+    Array.from(event.dataTransfer?.types ?? []).includes("Files");
+
+  const handleStageDragEnter = (event: DragEvent<HTMLDivElement>) => {
+    if (!hasDraggedFiles(event)) return;
+    event.preventDefault();
+    fileDragDepthRef.current += 1;
+    setIsFileDragOver(true);
+  };
+
+  const handleStageDragOver = (event: DragEvent<HTMLDivElement>) => {
+    if (!hasDraggedFiles(event)) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+  };
+
+  const handleStageDragLeave = (event: DragEvent<HTMLDivElement>) => {
+    if (!hasDraggedFiles(event)) return;
+    event.preventDefault();
+    fileDragDepthRef.current = Math.max(0, fileDragDepthRef.current - 1);
+    if (fileDragDepthRef.current === 0) {
+      setIsFileDragOver(false);
+    }
+  };
+
+  const handleStageDrop = (event: DragEvent<HTMLDivElement>) => {
+    if (!hasDraggedFiles(event)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    fileDragDepthRef.current = 0;
+    setIsFileDragOver(false);
+
+    const file = event.dataTransfer.files?.[0];
+    if (file) loadImageFile(file);
   };
 
   const handleImagePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -366,13 +423,13 @@ export function LogoStudio({ onNotify }: LogoStudioProps) {
             ref={stageRef}
             className={`studio-stage ${imageUrl ? "has-image" : ""} ${
               draggingTarget === "image" ? "is-dragging" : ""
-            }`}
+            } ${isFileDragOver ? "is-file-over" : ""}`}
             tabIndex={imageUrl ? 0 : -1}
             role="application"
             aria-label={
               imageUrl
-                ? "Lienzo cuadrado 1 a 1. Arrastrá o usá las flechas para encuadrar la foto."
-                : "Lienzo cuadrado 1 a 1 vacío"
+                ? "Lienzo cuadrado 1 a 1. Arrastrá para encuadrar la foto o soltá otra imagen encima."
+                : "Lienzo cuadrado 1 a 1 vacío. Hacé clic o arrastrá una imagen desde tu carpeta."
             }
             onPointerDown={handleImagePointerDown}
             onPointerMove={handleImagePointerMove}
@@ -380,6 +437,10 @@ export function LogoStudio({ onNotify }: LogoStudioProps) {
             onPointerCancel={endDrag}
             onLostPointerCapture={endDrag}
             onKeyDown={handleImageKeyDown}
+            onDragEnter={handleStageDragEnter}
+            onDragOver={handleStageDragOver}
+            onDragLeave={handleStageDragLeave}
+            onDrop={handleStageDrop}
           >
             {imageUrl ? (
               <img
@@ -404,12 +465,19 @@ export function LogoStudio({ onNotify }: LogoStudioProps) {
                   <ImagePlus size={26} aria-hidden="true" />
                 </span>
                 <strong className="font-display text-xl text-[#563a2a]">
-                  Subí una foto para encuadrar
+                  Subí o arrastrá una foto aquí
                 </strong>
                 <span className="text-[12px] text-[#8f6c66]">
-                  Se adapta en formato 1:1 listo para Instagram
+                  Desde tu carpeta al cuadrado 1:1 para Instagram
                 </span>
               </button>
+            )}
+
+            {isFileDragOver && (
+              <div className="studio-drop-overlay" aria-hidden="true">
+                <Upload size={26} />
+                <span>Soltá la imagen para cargarla</span>
+              </div>
             )}
 
             {imageUrl && (

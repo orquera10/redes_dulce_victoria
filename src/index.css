@@ -841,3 +841,27 @@
   opacity: 0.45;
   cursor: not-allowed;
 }
+
+
+.studio-stage.is-file-over {
+  border-color: #9b5962;
+  border-style: dashed;
+  box-shadow: 0 0 0 4px #9b596226;
+}
+
+.studio-drop-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(248, 244, 233, 0.9);
+  color: #8f4b53;
+  font-size: 14px;
+  font-weight: 700;
+  pointer-events: none;
+  backdrop-filter: blur(2px);
+}
