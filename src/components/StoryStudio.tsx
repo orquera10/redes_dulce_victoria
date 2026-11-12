@@ -48,15 +48,15 @@ const STORY_W = 1080;
 const STORY_H = 1920;
 
 const LAYOUTS: Record<PhotoCount, SlotRect[]> = {
-  1: [{ x: 0.09, y: 0.36, w: 0.82, h: 0.44, rotateDeg: -1.2 }],
+  1: [{ x: 0.035, y: 0.27, w: 0.93, h: 0.59, rotateDeg: -1.0 }],
   2: [
-    { x: 0.08, y: 0.34, w: 0.84, h: 0.25, rotateDeg: -2.0 },
-    { x: 0.08, y: 0.61, w: 0.84, h: 0.25, rotateDeg: 1.6 },
+    { x: 0.03, y: 0.255, w: 0.94, h: 0.32, rotateDeg: -1.6 },
+    { x: 0.03, y: 0.59, w: 0.94, h: 0.32, rotateDeg: 1.4 },
   ],
   3: [
-    { x: 0.11, y: 0.335, w: 0.78, h: 0.275, rotateDeg: -1.5 },
-    { x: 0.05, y: 0.625, w: 0.44, h: 0.235, rotateDeg: 2.2 },
-    { x: 0.51, y: 0.625, w: 0.44, h: 0.235, rotateDeg: -1.8 },
+    { x: 0.04, y: 0.265, w: 0.92, h: 0.33, rotateDeg: -1.3 },
+    { x: 0.025, y: 0.61, w: 0.465, h: 0.3, rotateDeg: 1.8 },
+    { x: 0.51, y: 0.61, w: 0.465, h: 0.3, rotateDeg: -1.5 },
   ],
 };
 
@@ -140,34 +140,66 @@ function drawLeafTwig(
   ctx.translate(x, y);
   ctx.rotate((angleDeg * Math.PI) / 180);
   ctx.scale(scale, scale);
-  ctx.strokeStyle = "#8a5a52";
+  ctx.strokeStyle = "#7c524b";
   ctx.lineWidth = 3.2;
   ctx.lineCap = "round";
   ctx.beginPath();
   ctx.moveTo(0, 0);
-  ctx.quadraticCurveTo(40, -60, 105, -135);
+  ctx.bezierCurveTo(38, -58, 72, -110, 140, -185);
   ctx.stroke();
 
   const leaves = [
-    { lx: 28, ly: -38, rot: -35 },
-    { lx: 56, ly: -74, rot: 35 },
-    { lx: 78, ly: -102, rot: -32 },
-    { lx: 102, ly: -132, rot: 12 },
+    { lx: 22, ly: -32, rot: -42, rx: 22, ry: 9 },
+    { lx: 40, ly: -56, rot: 36, rx: 20, ry: 8.5 },
+    { lx: 62, ly: -84, rot: -38, rx: 23, ry: 9.5 },
+    { lx: 84, ly: -112, rot: 32, rx: 21, ry: 8.5 },
+    { lx: 106, ly: -140, rot: -34, rx: 19, ry: 8 },
+    { lx: 124, ly: -164, rot: 26, rx: 17, ry: 7 },
+    { lx: 142, ly: -188, rot: -8, rx: 16, ry: 7 },
   ];
-  leaves.forEach(({ lx, ly, rot }) => {
+  leaves.forEach(({ lx, ly, rot, rx, ry }) => {
     ctx.save();
     ctx.translate(lx, ly);
     ctx.rotate((rot * Math.PI) / 180);
-    ctx.fillStyle = "rgba(232, 188, 184, 0.45)";
-    ctx.strokeStyle = "#8a5a52";
+    ctx.fillStyle = "rgba(232, 184, 180, 0.55)";
+    ctx.strokeStyle = "#7c524b";
     ctx.lineWidth = 2.6;
     ctx.beginPath();
-    ctx.ellipse(18, 0, 20, 9, 0, 0, Math.PI * 2);
+    ctx.ellipse(rx, 0, rx, ry, 0, 0, Math.PI * 2);
     ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(3, 0);
+    ctx.lineTo(rx * 1.55, 0);
     ctx.stroke();
     ctx.restore();
   });
+
+  // Delicate blossom buds near branch tip
+  [
+    { bx: 50, by: -68, r: 6 },
+    { bx: 94, by: -125, r: 5.5 },
+  ].forEach(({ bx, by, r }) => {
+    ctx.fillStyle = "#f4cdc7";
+    ctx.strokeStyle = "#7c524b";
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.arc(bx, by, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  });
   ctx.restore();
+}
+
+function drawPastelDots(ctx: CanvasRenderingContext2D, dots: Array<[number, number, number, string]>) {
+  dots.forEach(([x, y, r, color]) => {
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  });
 }
 
 export function StoryStudio({ onNotify }: StoryStudioProps) {
@@ -175,17 +207,17 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
   const [selectedSlot, setSelectedSlot] = useState(0);
   const [slots, setSlots] = useState<SlotState[]>([emptySlot(), emptySlot(), emptySlot()]);
 
-  const [bgStyle, setBgStyle] = useState<BgStyle>("waves");
+  const [bgStyle, setBgStyle] = useState<BgStyle>("botanical");
   const [frameStyle, setFrameStyle] = useState<FrameStyle>("polaroid");
 
-  const [logoPos, setLogoPos] = useState<Point>({ x: 0.5, y: 0.115 });
-  const [logoScalePct, setLogoScalePct] = useState(24);
+  const [logoPos, setLogoPos] = useState<Point>({ x: 0.5, y: 0.088 });
+  const [logoScalePct, setLogoScalePct] = useState(21);
 
   const [titleTop, setTitleTop] = useState("Pedidos del día");
   const [titleScript, setTitleScript] = useState("de hoy");
   const [footerText, setFooterText] = useState("");
   const [hasBrushBg, setHasBrushBg] = useState(true);
-  const [textPos, setTextPos] = useState<Point>({ x: 0.5, y: 0.255 });
+  const [textPos, setTextPos] = useState<Point>({ x: 0.5, y: 0.205 });
   const [textScalePct, setTextScalePct] = useState(100);
 
   const [dragOverSlot, setDragOverSlot] = useState<number | null>(null);
@@ -503,54 +535,99 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
     ctx.fillRect(0, 0, STORY_W, STORY_H);
 
     // Decorative background elements matching Dulce Victoria brand
-    if (bgStyle === "waves" || bgStyle === "botanical") {
+    if (bgStyle === "waves" || bgStyle === "botanical" || bgStyle === "hearts") {
       ctx.fillStyle = "#f1dfda";
       ctx.beginPath();
       ctx.moveTo(0, 0);
-      ctx.lineTo(420, 0);
-      ctx.bezierCurveTo(340, 170, 170, 180, 0, 320);
+      ctx.lineTo(440, 0);
+      ctx.bezierCurveTo(350, 185, 175, 195, 0, 340);
       ctx.closePath();
       ctx.fill();
 
       ctx.beginPath();
       ctx.moveTo(STORY_W, 0);
-      ctx.lineTo(STORY_W - 320, 0);
-      ctx.bezierCurveTo(STORY_W - 240, 120, STORY_W - 120, 170, STORY_W, 250);
+      ctx.lineTo(STORY_W - 360, 0);
+      ctx.bezierCurveTo(STORY_W - 260, 130, STORY_W - 130, 185, STORY_W, 280);
       ctx.closePath();
       ctx.fill();
 
       ctx.beginPath();
       ctx.moveTo(0, STORY_H);
-      ctx.lineTo(0, STORY_H - 300);
-      ctx.bezierCurveTo(220, STORY_H - 220, 380, STORY_H - 120, 560, STORY_H);
+      ctx.lineTo(0, STORY_H - 330);
+      ctx.bezierCurveTo(230, STORY_H - 230, 410, STORY_H - 130, 590, STORY_H);
       ctx.closePath();
       ctx.fill();
 
       ctx.beginPath();
       ctx.moveTo(STORY_W, STORY_H);
-      ctx.lineTo(STORY_W, STORY_H - 340);
-      ctx.bezierCurveTo(STORY_W - 210, STORY_H - 270, STORY_W - 350, STORY_H - 130, STORY_W - 520, STORY_H);
+      ctx.lineTo(STORY_W, STORY_H - 360);
+      ctx.bezierCurveTo(STORY_W - 220, STORY_H - 280, STORY_W - 370, STORY_H - 140, STORY_W - 550, STORY_H);
       ctx.closePath();
       ctx.fill();
+
+      // Secondary subtle wave line
+      ctx.strokeStyle = "rgba(216, 154, 149, 0.45)";
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.moveTo(0, 380);
+      ctx.bezierCurveTo(180, 230, 370, 200, 480, 0);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(STORY_W, STORY_H - 390);
+      ctx.bezierCurveTo(STORY_W - 210, STORY_H - 260, STORY_W - 360, STORY_H - 140, STORY_W - 590, STORY_H);
+      ctx.stroke();
     }
 
     if (bgStyle === "botanical") {
-      drawLeafTwig(ctx, 20, 260, 18, 1.1);
-      drawLeafTwig(ctx, STORY_W - 20, 320, -145, 1.05);
-      drawLeafTwig(ctx, 40, STORY_H - 30, 8, 1.15);
-      drawLeafTwig(ctx, STORY_W - 40, STORY_H - 40, -155, 1.15);
-      drawHeart(ctx, 145, 420, 34);
-      drawHeart(ctx, STORY_W - 130, 480, 32);
+      drawLeafTwig(ctx, 16, 300, 16, 1.25);
+      drawLeafTwig(ctx, STORY_W - 16, 330, -142, 1.2);
+      drawLeafTwig(ctx, 24, STORY_H - 24, 14, 1.3);
+      drawLeafTwig(ctx, STORY_W - 24, STORY_H - 30, -152, 1.3);
+      drawPastelDots(ctx, [
+        [230, 100, 7, "#e2b8b3"],
+        [258, 124, 5, "#e8c48d"],
+        [205, 140, 5.5, "#e2b8b3"],
+        [STORY_W - 215, 108, 7, "#e2b8b3"],
+        [STORY_W - 245, 134, 5, "#e8c48d"],
+        [250, STORY_H - 96, 6.5, "#e2b8b3"],
+        [285, STORY_H - 118, 5, "#e8c48d"],
+        [STORY_W - 240, STORY_H - 102, 7, "#e2b8b3"],
+        [STORY_W - 275, STORY_H - 125, 5, "#e8c48d"],
+      ]);
+      drawHeart(ctx, 290, 225, 30);
+      drawHeart(ctx, STORY_W - 290, 225, 30);
+      drawHeart(ctx, 110, STORY_H - 235, 32);
+      drawHeart(ctx, STORY_W - 110, STORY_H - 235, 32);
+      drawHeart(ctx, STORY_W / 2, STORY_H - 72, 28, "#c98b88", "#d89a95");
     }
 
-    if (bgStyle === "hearts" || bgStyle === "waves") {
-      drawBurst(ctx, 260, 170, -1, 1);
-      drawBurst(ctx, STORY_W - 260, 170, 1, 1);
-      drawHeart(ctx, 130, 330, 38);
-      drawHeart(ctx, STORY_W - 125, 480, 36);
-      drawHeart(ctx, 110, 1140, 36);
-      drawHeart(ctx, STORY_W - 105, 1260, 36);
-      drawHeart(ctx, STORY_W / 2, STORY_H - 120, 34);
+    if (bgStyle === "waves") {
+      drawBurst(ctx, 295, 140, -1, 1);
+      drawBurst(ctx, STORY_W - 295, 140, 1, 1);
+      drawHeart(ctx, 130, 310, 36);
+      drawHeart(ctx, STORY_W - 130, 310, 36);
+      drawHeart(ctx, STORY_W / 2, STORY_H - 75, 32);
+      ctx.strokeStyle = "#c98b88";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(STORY_W / 2 - 140, STORY_H - 58);
+      ctx.lineTo(STORY_W / 2 - 42, STORY_H - 58);
+      ctx.moveTo(STORY_W / 2 + 42, STORY_H - 58);
+      ctx.lineTo(STORY_W / 2 + 140, STORY_H - 58);
+      ctx.stroke();
+    }
+
+    if (bgStyle === "hearts") {
+      drawBurst(ctx, 295, 140, -1, 1);
+      drawBurst(ctx, STORY_W - 295, 140, 1, 1);
+      drawHeart(ctx, 118, 280, 40);
+      drawHeart(ctx, 215, 175, 24, "#d89a95", "#e2b2ad");
+      drawHeart(ctx, STORY_W - 118, 280, 40);
+      drawHeart(ctx, STORY_W - 215, 175, 24, "#d89a95", "#e2b2ad");
+      drawHeart(ctx, 90, STORY_H - 220, 36);
+      drawHeart(ctx, STORY_W - 90, STORY_H - 220, 36);
+      drawHeart(ctx, STORY_W / 2, STORY_H - 72, 34, "#c98b88", "#d89a95");
     }
 
     // Photos in 1, 2, or 3 frames
@@ -562,7 +639,7 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
       const fy = rect.y * STORY_H;
       const fw = rect.w * STORY_W;
       const fh = rect.h * STORY_H;
-      const border = frameStyle === "polaroid" ? 24 : frameStyle === "tape" ? 20 : 14;
+      const border = frameStyle === "polaroid" ? 16 : frameStyle === "tape" ? 14 : 10;
       const radius = frameStyle === "soft" ? 36 : 8;
 
       ctx.save();
@@ -765,50 +842,122 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
             preserveAspectRatio="none"
             aria-hidden="true"
           >
-            {(bgStyle === "waves" || bgStyle === "botanical") && (
-              <g fill="#f1dfda">
-                <path d="M0,0 L420,0 C340,170 170,180 0,320 Z" />
-                <path d="M1080,0 L760,0 C840,120 960,170 1080,250 Z" />
-                <path d="M0,1920 L0,1620 C220,1700 380,1800 560,1920 Z" />
-                <path d="M1080,1920 L1080,1580 C870,1650 730,1790 560,1920 Z" />
+            {(bgStyle === "waves" || bgStyle === "botanical" || bgStyle === "hearts") && (
+              <>
+                <g fill="#f1dfda">
+                  <path d="M0,0 L440,0 C350,185 175,195 0,340 Z" />
+                  <path d="M1080,0 L720,0 C820,130 950,185 1080,280 Z" />
+                  <path d="M0,1920 L0,1590 C230,1690 410,1790 590,1920 Z" />
+                  <path d="M1080,1920 L1080,1560 C860,1640 710,1780 530,1920 Z" />
+                </g>
+                <g fill="none" stroke="rgba(216,154,149,0.45)" strokeWidth="3.5">
+                  <path d="M0,380 C180,230 370,200 480,0" />
+                  <path d="M1080,1530 C870,1660 720,1780 490,1920" />
+                </g>
+              </>
+            )}
+
+            {(bgStyle === "waves" || bgStyle === "hearts") && (
+              <g strokeLinecap="round" strokeWidth="6.5">
+                <line x1="295" y1="140" x2="258" y2="124" stroke="#d89a95" />
+                <line x1="295" y1="140" x2="255" y2="142" stroke="#9dbdc2" />
+                <line x1="295" y1="140" x2="262" y2="158" stroke="#e8c48d" />
+                <line x1="785" y1="140" x2="822" y2="124" stroke="#d89a95" />
+                <line x1="785" y1="140" x2="825" y2="142" stroke="#9dbdc2" />
+                <line x1="785" y1="140" x2="818" y2="158" stroke="#e8c48d" />
+                <path
+                  d="M130,322 C150,300 165,325 130,350 C95,325 110,300 130,322 Z"
+                  fill="none"
+                  stroke="#c98b88"
+                  strokeWidth="4.5"
+                />
+                <path
+                  d="M950,322 C970,300 985,325 950,350 C915,325 930,300 950,322 Z"
+                  fill="none"
+                  stroke="#c98b88"
+                  strokeWidth="4.5"
+                />
+                <path
+                  d="M540,1855 C560,1835 574,1858 540,1880 C506,1858 520,1835 540,1855 Z"
+                  fill={bgStyle === "hearts" ? "#d89a95" : "none"}
+                  stroke="#c98b88"
+                  strokeWidth="4.5"
+                />
+                {bgStyle === "waves" && (
+                  <g stroke="#c98b88" strokeWidth="3">
+                    <line x1="400" y1="1862" x2="498" y2="1862" />
+                    <line x1="582" y1="1862" x2="680" y2="1862" />
+                  </g>
+                )}
               </g>
             )}
-            {(bgStyle === "hearts" || bgStyle === "waves") && (
-              <g strokeLinecap="round" strokeWidth="7">
-                <line x1="255" y1="168" x2="218" y2="152" stroke="#d89a95" />
-                <line x1="255" y1="168" x2="215" y2="170" stroke="#9dbdc2" />
-                <line x1="255" y1="168" x2="222" y2="186" stroke="#e8c48d" />
-                <line x1="825" y1="168" x2="862" y2="152" stroke="#d89a95" />
-                <line x1="825" y1="168" x2="865" y2="170" stroke="#9dbdc2" />
-                <line x1="825" y1="168" x2="858" y2="186" stroke="#e8c48d" />
-                <path
-                  d="M130,342 C152,320 168,345 130,372 C92,345 108,320 130,342 Z"
-                  fill="none"
-                  stroke="#c98b88"
-                  strokeWidth="5"
-                />
-                <path
-                  d="M955,492 C977,470 993,495 955,522 C917,495 933,470 955,492 Z"
-                  fill="none"
-                  stroke="#c98b88"
-                  strokeWidth="5"
-                />
-                <path
-                  d="M540,1812 C562,1790 578,1815 540,1842 C502,1815 518,1790 540,1812 Z"
-                  fill="none"
-                  stroke="#c98b88"
-                  strokeWidth="5"
-                />
+
+            {bgStyle === "hearts" && (
+              <g>
+                <path d="M215,182 C228,168 238,184 215,200 C192,184 202,168 215,182 Z" fill="#e2b2ad" />
+                <path d="M865,182 C878,168 888,184 865,200 C842,184 852,168 865,182 Z" fill="#e2b2ad" />
+                <path d="M90,1705 C110,1685 125,1708 90,1732 C55,1708 70,1685 90,1705 Z" fill="none" stroke="#c98b88" strokeWidth="4.5" />
+                <path d="M990,1705 C1010,1685 1025,1708 990,1732 C955,1708 970,1685 990,1705 Z" fill="none" stroke="#c98b88" strokeWidth="4.5" />
               </g>
             )}
+
             {bgStyle === "botanical" && (
-              <g stroke="#8a5a52" strokeWidth="3.5" fill="rgba(232,188,184,0.45)">
-                <path d="M25,260 Q75,205 140,130" fill="none" />
-                <ellipse cx="66" cy="212" rx="18" ry="8" transform="rotate(-25 66 212)" />
-                <ellipse cx="105" cy="175" rx="18" ry="8" transform="rotate(35 105 175)" />
-                <path d="M1055,1870 Q995,1800 945,1725" fill="none" />
-                <ellipse cx="1008" cy="1812" rx="18" ry="8" transform="rotate(28 1008 1812)" />
-                <ellipse cx="972" cy="1765" rx="18" ry="8" transform="rotate(-32 972 1765)" />
+              <g>
+                {/* Top-left branch */}
+                <g transform="translate(16 300) rotate(16) scale(1.25)" stroke="#7c524b" fill="rgba(232,184,180,0.55)">
+                  <path d="M0,0 C38,-58 72,-110 140,-185" fill="none" strokeWidth="3.2" strokeLinecap="round" />
+                  <ellipse cx="42" cy="-36" rx="22" ry="9" transform="rotate(-42 22 -32)" strokeWidth="2.6" />
+                  <ellipse cx="58" cy="-58" rx="20" ry="8.5" transform="rotate(36 40 -56)" strokeWidth="2.6" />
+                  <ellipse cx="82" cy="-86" rx="23" ry="9.5" transform="rotate(-38 62 -84)" strokeWidth="2.6" />
+                  <ellipse cx="102" cy="-114" rx="21" ry="8.5" transform="rotate(32 84 -112)" strokeWidth="2.6" />
+                  <ellipse cx="122" cy="-142" rx="19" ry="8" transform="rotate(-34 106 -140)" strokeWidth="2.6" />
+                  <ellipse cx="140" cy="-165" rx="17" ry="7" transform="rotate(26 124 -164)" strokeWidth="2.6" />
+                  <circle cx="50" cy="-68" r="6" fill="#f4cdc7" strokeWidth="2.2" />
+                  <circle cx="94" cy="-125" r="5.5" fill="#f4cdc7" strokeWidth="2.2" />
+                </g>
+                {/* Top-right branch */}
+                <g transform="translate(1064 330) rotate(-142) scale(1.2)" stroke="#7c524b" fill="rgba(232,184,180,0.55)">
+                  <path d="M0,0 C38,-58 72,-110 140,-185" fill="none" strokeWidth="3.2" strokeLinecap="round" />
+                  <ellipse cx="42" cy="-36" rx="22" ry="9" transform="rotate(-42 22 -32)" strokeWidth="2.6" />
+                  <ellipse cx="58" cy="-58" rx="20" ry="8.5" transform="rotate(36 40 -56)" strokeWidth="2.6" />
+                  <ellipse cx="82" cy="-86" rx="23" ry="9.5" transform="rotate(-38 62 -84)" strokeWidth="2.6" />
+                  <ellipse cx="102" cy="-114" rx="21" ry="8.5" transform="rotate(32 84 -112)" strokeWidth="2.6" />
+                  <ellipse cx="122" cy="-142" rx="19" ry="8" transform="rotate(-34 106 -140)" strokeWidth="2.6" />
+                  <circle cx="50" cy="-68" r="6" fill="#f4cdc7" strokeWidth="2.2" />
+                </g>
+                {/* Bottom-left branch */}
+                <g transform="translate(24 1896) rotate(14) scale(1.3)" stroke="#7c524b" fill="rgba(232,184,180,0.55)">
+                  <path d="M0,0 C38,-58 72,-110 140,-185" fill="none" strokeWidth="3.2" strokeLinecap="round" />
+                  <ellipse cx="42" cy="-36" rx="22" ry="9" transform="rotate(-42 22 -32)" strokeWidth="2.6" />
+                  <ellipse cx="58" cy="-58" rx="20" ry="8.5" transform="rotate(36 40 -56)" strokeWidth="2.6" />
+                  <ellipse cx="82" cy="-86" rx="23" ry="9.5" transform="rotate(-38 62 -84)" strokeWidth="2.6" />
+                  <ellipse cx="102" cy="-114" rx="21" ry="8.5" transform="rotate(32 84 -112)" strokeWidth="2.6" />
+                  <ellipse cx="122" cy="-142" rx="19" ry="8" transform="rotate(-34 106 -140)" strokeWidth="2.6" />
+                  <circle cx="94" cy="-125" r="5.5" fill="#f4cdc7" strokeWidth="2.2" />
+                </g>
+                {/* Bottom-right branch */}
+                <g transform="translate(1056 1890) rotate(-152) scale(1.3)" stroke="#7c524b" fill="rgba(232,184,180,0.55)">
+                  <path d="M0,0 C38,-58 72,-110 140,-185" fill="none" strokeWidth="3.2" strokeLinecap="round" />
+                  <ellipse cx="42" cy="-36" rx="22" ry="9" transform="rotate(-42 22 -32)" strokeWidth="2.6" />
+                  <ellipse cx="58" cy="-58" rx="20" ry="8.5" transform="rotate(36 40 -56)" strokeWidth="2.6" />
+                  <ellipse cx="82" cy="-86" rx="23" ry="9.5" transform="rotate(-38 62 -84)" strokeWidth="2.6" />
+                  <ellipse cx="102" cy="-114" rx="21" ry="8.5" transform="rotate(32 84 -112)" strokeWidth="2.6" />
+                  <ellipse cx="122" cy="-142" rx="19" ry="8" transform="rotate(-34 106 -140)" strokeWidth="2.6" />
+                  <circle cx="94" cy="-125" r="5.5" fill="#f4cdc7" strokeWidth="2.2" />
+                </g>
+                {/* Confetti dots & hearts */}
+                <circle cx="230" cy="100" r="7" fill="#e2b8b3" />
+                <circle cx="258" cy="124" r="5" fill="#e8c48d" />
+                <circle cx="205" cy="140" r="5.5" fill="#e2b8b3" />
+                <circle cx="865" cy="108" r="7" fill="#e2b8b3" />
+                <circle cx="835" cy="134" r="5" fill="#e8c48d" />
+                <circle cx="250" cy="1824" r="6.5" fill="#e2b8b3" />
+                <circle cx="285" cy="1802" r="5" fill="#e8c48d" />
+                <circle cx="840" cy="1818" r="7" fill="#e2b8b3" />
+                <circle cx="805" cy="1795" r="5" fill="#e8c48d" />
+                <path d="M290,234 C306,218 318,236 290,255 C262,236 274,218 290,234 Z" fill="none" stroke="#c98b88" strokeWidth="4" />
+                <path d="M790,234 C806,218 818,236 790,255 C762,236 774,218 790,234 Z" fill="none" stroke="#c98b88" strokeWidth="4" />
+                <path d="M540,1855 C556,1840 568,1858 540,1876 C512,1858 524,1840 540,1855 Z" fill="#d89a95" />
               </g>
             )}
           </svg>
@@ -819,7 +968,7 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
             const frameW = rect.w * stageSize.w;
             const frameH = rect.h * stageSize.h;
             const borderPx =
-              (frameStyle === "polaroid" ? 24 : frameStyle === "tape" ? 20 : 14) * uiScale;
+              (frameStyle === "polaroid" ? 16 : frameStyle === "tape" ? 14 : 10) * uiScale;
             const innerW = Math.max(10, frameW - borderPx * 2);
             const innerH = Math.max(10, frameH - borderPx * 2);
             const metrics = getSlotCoverMetrics(slot.natural, innerW, innerH, slot.zoom);
