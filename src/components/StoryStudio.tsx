@@ -19,6 +19,7 @@ import {
   Type,
   Upload,
 } from "lucide-react";
+import { downloadPngBlob, sharePngBlob } from "../utils/exportImage";
 import {
   BAKERY_ICONS,
   BAKERY_PLACEMENTS,
@@ -118,9 +119,11 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
   const [footerText, setFooterText] = useState("");
   const [showWhatsappIcon, setShowWhatsappIcon] = useState(true);
   const [textFrame, setTextFrame] = useState<TextFrameStyle>("scalloped");
-  const [separatorStyle, setSeparatorStyle] = useState<SeparatorStyle>("leaves-heart");
+  const [separatorStyle, setSeparatorStyle] = useState<SeparatorStyle>("none");
   const [textPos, setTextPos] = useState<Point>({ x: 0.5, y: 0.205 });
   const [textScalePct, setTextScalePct] = useState(100);
+  const [separatorPos, setSeparatorPos] = useState<Point>({ x: 0.5, y: 0.28 });
+  const [footerPos, setFooterPos] = useState<Point>({ x: 0.5, y: 0.94 });
 
   const [dragOverSlot, setDragOverSlot] = useState<number | null>(null);
   const [draggingItem, setDraggingItem] = useState<string | null>(null);
@@ -135,7 +138,7 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
   const slotDragDepthRef = useRef<Record<number, number>>({});
 
   const dragOriginRef = useRef<{
-    kind: "slot" | "frame-move" | "frame-resize" | "logo" | "text";
+    kind: "slot" | "frame-move" | "frame-resize" | "logo" | "text" | "separator" | "footer";
     slotIndex?: number;
     pointerId: number;
     startX: number;
@@ -424,26 +427,35 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
   };
 
   const handleFloatingPointerDown = (
-    kind: "logo" | "text",
-    event: ReactPointerEvent<HTMLButtonElement>
+    kind: "logo" | "text" | "separator" | "footer",
+    event: ReactPointerEvent<HTMLButtonElement | HTMLDivElement>
   ) => {
     event.stopPropagation();
     if (event.pointerType === "mouse" && event.button !== 0) return;
 
     event.currentTarget.setPointerCapture(event.pointerId);
+    const startPos =
+      kind === "logo"
+        ? logoPos
+        : kind === "text"
+        ? textPos
+        : kind === "separator"
+        ? separatorPos
+        : footerPos;
+
     dragOriginRef.current = {
       kind,
       pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
-      startPos: kind === "logo" ? logoPos : textPos,
+      startPos,
     };
     setDraggingItem(kind);
   };
 
   const handleFloatingPointerMove = (
-    kind: "logo" | "text",
-    event: ReactPointerEvent<HTMLButtonElement>
+    kind: "logo" | "text" | "separator" | "footer",
+    event: ReactPointerEvent<HTMLButtonElement | HTMLDivElement>
   ) => {
     event.stopPropagation();
     const origin = dragOriginRef.current;
@@ -462,8 +474,12 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
     const raw = { x: origin.startPos.x + dx, y: origin.startPos.y + dy };
     if (kind === "logo") {
       setLogoPos(clampLogoPos(raw));
-    } else {
+    } else if (kind === "text") {
       setTextPos({ x: clamp(raw.x, 0.14, 0.86), y: clamp(raw.y, 0.08, 0.92) });
+    } else if (kind === "separator") {
+      setSeparatorPos({ x: clamp(raw.x, 0.14, 0.86), y: clamp(raw.y, 0.06, 0.94) });
+    } else if (kind === "footer") {
+      setFooterPos({ x: clamp(raw.x, 0.16, 0.84), y: clamp(raw.y, 0.06, 0.96) });
     }
   };
 
@@ -478,11 +494,18 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
   };
 
   const handleFloatingKeyDown = (
-    kind: "logo" | "text",
-    event: KeyboardEvent<HTMLButtonElement>
+    kind: "logo" | "text" | "separator" | "footer",
+    event: KeyboardEvent<HTMLButtonElement | HTMLDivElement>
   ) => {
     const step = event.shiftKey ? 0.04 : 0.018;
-    const current = kind === "logo" ? logoPos : textPos;
+    const current =
+      kind === "logo"
+        ? logoPos
+        : kind === "text"
+        ? textPos
+        : kind === "separator"
+        ? separatorPos
+        : footerPos;
     let next: Point | null = null;
     if (event.key === "ArrowLeft") next = { x: current.x - step, y: current.y };
     if (event.key === "ArrowRight") next = { x: current.x + step, y: current.y };
@@ -493,9 +516,15 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
     if (kind === "logo") {
       setLogoPos(clampLogoPos(next));
       setLiveStatus("Posición del logo actualizada.");
-    } else {
+    } else if (kind === "text") {
       setTextPos({ x: clamp(next.x, 0.14, 0.86), y: clamp(next.y, 0.08, 0.92) });
       setLiveStatus("Posición del texto actualizada.");
+    } else if (kind === "separator") {
+      setSeparatorPos({ x: clamp(next.x, 0.14, 0.86), y: clamp(next.y, 0.06, 0.94) });
+      setLiveStatus("Posición del separador actualizada.");
+    } else if (kind === "footer") {
+      setFooterPos({ x: clamp(next.x, 0.16, 0.84), y: clamp(next.y, 0.06, 0.96) });
+      setLiveStatus("Posición del pie actualizada.");
     }
   };
 
@@ -662,8 +691,13 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
         ctx.fillText(titleScript.trim(), tx, ty + (titleTop.trim() ? 48 * scaleFactor : 0));
       }
       ctx.restore();
-      const sepY = ty + (textFrame === "none" ? 112 : 148) * scaleFactor;
-      drawSeparatorCanvas(ctx, separatorStyle, tx, sepY, scaleFactor, palette);
+    }
+
+    // Separator block
+    if (separatorStyle !== "none") {
+      const sx = separatorPos.x * STORY_W;
+      const sy = separatorPos.y * STORY_H;
+      drawSeparatorCanvas(ctx, separatorStyle, sx, sy, scaleFactor, palette);
     }
 
     // Optional bottom footer badge
@@ -675,8 +709,8 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
       const iconGap = showWhatsappIcon ? 74 : 0;
       const pillW = Math.min(920, Math.max(460, Math.round(textW + iconGap + 96)));
       const pillH = 82;
-      const px = (STORY_W - pillW) / 2;
-      const py = STORY_H - 126;
+      const px = footerPos.x * STORY_W - pillW / 2;
+      const py = footerPos.y * STORY_H - pillH / 2;
 
       ctx.shadowColor = "rgba(73, 43, 38, 0.14)";
       ctx.shadowBlur = 18;
@@ -693,7 +727,7 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
       const cy = py + pillH / 2;
       if (showWhatsappIcon) {
         const contentW = 54 + 18 + textW;
-        const startX = (STORY_W - Math.min(contentW, pillW - 56)) / 2;
+        const startX = px + (pillW - Math.min(contentW, pillW - 56)) / 2;
         const iconCx = startX + 27;
         const r = 27;
 
@@ -745,7 +779,7 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
         ctx.fillStyle = palette.text;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText(label, STORY_W / 2, cy + 1, pillW - 72);
+        ctx.fillText(label, px + pillW / 2, cy + 1, pillW - 72);
       }
       ctx.restore();
     }
@@ -761,15 +795,8 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
         canvas.toBlob(resolve, "image/png", 1)
       );
       if (!blob) throw new Error("Blob failed");
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `dulce-victoria-historia-9x16-${Date.now()}.png`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1500);
-      onNotify("Historia 9:16 descargada en PNG (1080 × 1920).");
+      const msg = await downloadPngBlob(blob, `dulce-victoria-historia-9x16-${Date.now()}.png`);
+      onNotify(msg);
     } catch {
       onNotify("No pudimos generar la historia. Probá nuevamente.");
     } finally {
@@ -785,15 +812,14 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
         canvas.toBlob(resolve, "image/png", 1)
       );
       if (!blob) throw new Error("Blob failed");
-      const file = new File([blob], "dulce-victoria-historia.png", { type: "image/png" });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ title: "Dulce Victoria — Historia 9:16", files: [file] });
-        onNotify("Historia compartida.");
-      } else {
-        await handleDownloadStory();
-      }
+      const res = await sharePngBlob(
+        blob,
+        `dulce-victoria-historia-9x16-${Date.now()}.png`,
+        "Dulce Victoria — Historia 9:16"
+      );
+      onNotify(res.message);
     } catch {
-      onNotify("Compartir cancelado o no disponible en este navegador.");
+      onNotify("Compartir cancelado o no disponible en este dispositivo.");
     } finally {
       setIsExporting(false);
     }
@@ -1214,77 +1240,109 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
                   {titleScript}
                 </span>
               )}
-              {separatorStyle !== "none" && (
-                <svg
-                  className="pointer-events-none absolute left-1/2 -translate-x-1/2 overflow-visible"
-                  style={{
-                    top: textFrame === "none" ? "106%" : "118%",
-                    width: `${Math.round(460 * uiScale)}px`,
-                    height: `${Math.round(52 * uiScale)}px`,
-                  }}
-                  viewBox="-230 -36 460 66"
-                  aria-hidden="true"
-                >
-                  {separatorStyle === "leaves-heart" && (
-                    <g>
-                      <path
-                        d="M0,-6 C15,-21 26,-4 0,13 C-26,-4 -15,-21 0,-6 Z"
-                        fill={palette.wave}
-                        stroke={palette.accent}
-                        strokeWidth="3.5"
-                      />
-                      {[-1, 1].map((dir) => (
-                        <g key={dir} transform={`scale(${dir} 1)`} stroke={palette.text} fill={palette.bg} strokeWidth="3" strokeLinecap="round">
-                          <line x1="42" y1="0" x2="155" y2="0" />
-                          <ellipse cx="12" cy="0" rx="12" ry="5.5" transform="translate(68 0) rotate(-38)" />
-                          <ellipse cx="12" cy="0" rx="12" ry="5.5" transform="translate(72 0) rotate(38)" />
-                          <ellipse cx="12" cy="0" rx="12" ry="5.5" transform="translate(102 0) rotate(-34)" />
-                          <ellipse cx="12" cy="0" rx="12" ry="5.5" transform="translate(106 0) rotate(34)" />
-                          <ellipse cx="12" cy="0" rx="12" ry="5.5" transform="translate(136 0) rotate(-28)" />
-                          <ellipse cx="12" cy="0" rx="12" ry="5.5" transform="translate(140 0) rotate(28)" />
-                          <ellipse cx="12" cy="0" rx="12" ry="5.5" transform="translate(168 0)" />
-                        </g>
-                      ))}
-                    </g>
-                  )}
-                  {separatorStyle === "dots-heart" && (
-                    <g>
-                      <line x1="-190" y1="0" x2="-68" y2="0" stroke={palette.text} strokeWidth="4" strokeLinecap="round" />
-                      <line x1="68" y1="0" x2="190" y2="0" stroke={palette.text} strokeWidth="4" strokeLinecap="round" />
-                      <circle cx="-48" cy="0" r="5.5" fill={palette.text} />
-                      <circle cx="48" cy="0" r="5.5" fill={palette.text} />
-                      <path
-                        d="M0,-6 C15,-21 26,-4 0,13 C-26,-4 -15,-21 0,-6 Z"
-                        fill={palette.wave}
-                        stroke={palette.accent}
-                        strokeWidth="3.5"
-                      />
-                    </g>
-                  )}
-                  {separatorStyle === "swirl-heart" && (
-                    <path
-                      d="M-220,12 C-150,-14 -80,28 -18,12 C8,5 22,-18 8,-28 C-2,-34 -12,-24 -2,-14 C10,-24 0,-34 -10,-28 C-24,-18 -10,5 18,12 C80,28 150,-14 220,12"
-                      fill="none"
-                      stroke={palette.accent}
-                      strokeWidth="4.2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  )}
-                </svg>
-              )}
             </button>
           )}
 
-          {/* Optional Footer Badge */}
+          {/* Movable Separator Block */}
+          {separatorStyle !== "none" && (
+            <button
+              type="button"
+              className={`story-separator-handle ${
+                draggingItem === "separator" ? "is-dragging" : ""
+              }`}
+              style={{
+                left: `${separatorPos.x * 100}%`,
+                top: `${separatorPos.y * 100}%`,
+              }}
+              aria-label="Mover separador decorativo. Arrastrá o usá las flechas."
+              onPointerDown={(e) => handleFloatingPointerDown("separator", e)}
+              onPointerMove={(e) => handleFloatingPointerMove("separator", e)}
+              onPointerUp={endPointerDrag}
+              onPointerCancel={endPointerDrag}
+              onLostPointerCapture={endPointerDrag}
+              onKeyDown={(e) => handleFloatingKeyDown("separator", e)}
+            >
+              <svg
+                style={{
+                  width: `${Math.round(460 * uiScale * (textScalePct / 100))}px`,
+                  height: `${Math.round(52 * uiScale * (textScalePct / 100))}px`,
+                }}
+                viewBox="-230 -36 460 66"
+                aria-hidden="true"
+                className="overflow-visible"
+              >
+                {separatorStyle === "leaves-heart" && (
+                  <g>
+                    <path
+                      d="M0,-6 C15,-21 26,-4 0,13 C-26,-4 -15,-21 0,-6 Z"
+                      fill={palette.wave}
+                      stroke={palette.accent}
+                      strokeWidth="3.5"
+                    />
+                    {[-1, 1].map((dir) => (
+                      <g key={dir} transform={`scale(${dir} 1)`} stroke={palette.text} fill={palette.bg} strokeWidth="3" strokeLinecap="round">
+                        <line x1="42" y1="0" x2="155" y2="0" />
+                        <ellipse cx="12" cy="0" rx="12" ry="5.5" transform="translate(68 0) rotate(-38)" />
+                        <ellipse cx="12" cy="0" rx="12" ry="5.5" transform="translate(72 0) rotate(38)" />
+                        <ellipse cx="12" cy="0" rx="12" ry="5.5" transform="translate(102 0) rotate(-34)" />
+                        <ellipse cx="12" cy="0" rx="12" ry="5.5" transform="translate(106 0) rotate(34)" />
+                        <ellipse cx="12" cy="0" rx="12" ry="5.5" transform="translate(136 0) rotate(-28)" />
+                        <ellipse cx="12" cy="0" rx="12" ry="5.5" transform="translate(140 0) rotate(28)" />
+                        <ellipse cx="12" cy="0" rx="12" ry="5.5" transform="translate(168 0)" />
+                      </g>
+                    ))}
+                  </g>
+                )}
+                {separatorStyle === "dots-heart" && (
+                  <g>
+                    <line x1="-190" y1="0" x2="-68" y2="0" stroke={palette.text} strokeWidth="4" strokeLinecap="round" />
+                    <line x1="68" y1="0" x2="190" y2="0" stroke={palette.text} strokeWidth="4" strokeLinecap="round" />
+                    <circle cx="-48" cy="0" r="5.5" fill={palette.text} />
+                    <circle cx="48" cy="0" r="5.5" fill={palette.text} />
+                    <path
+                      d="M0,-6 C15,-21 26,-4 0,13 C-26,-4 -15,-21 0,-6 Z"
+                      fill={palette.wave}
+                      stroke={palette.accent}
+                      strokeWidth="3.5"
+                    />
+                  </g>
+                )}
+                {separatorStyle === "swirl-heart" && (
+                  <path
+                    d="M-220,12 C-150,-14 -80,28 -18,12 C8,5 22,-18 8,-28 C-2,-34 -12,-24 -2,-14 C10,-24 0,-34 -10,-28 C-24,-18 -10,5 18,12 C80,28 150,-14 220,12"
+                    fill="none"
+                    stroke={palette.accent}
+                    strokeWidth="4.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                )}
+              </svg>
+            </button>
+          )}
+
+          {/* Movable Optional Footer Badge */}
           {footerText.trim() && (
             <div
-              className={`story-footer-pill ${showWhatsappIcon ? "has-wp" : ""}`}
+              tabIndex={0}
+              role="button"
+              aria-label="Mover pie de página con número. Arrastrá o usá las flechas."
+              className={`story-footer-pill ${showWhatsappIcon ? "has-wp" : ""} ${
+                draggingItem === "footer" ? "is-dragging" : ""
+              }`}
               style={{
+                left: `${footerPos.x * 100}%`,
+                top: `${footerPos.y * 100}%`,
                 fontSize: `${Math.max(10, Math.round(36 * uiScale))}px`,
                 borderColor: palette.accent,
                 color: palette.text,
               }}
+              onPointerDown={(e) => handleFloatingPointerDown("footer", e)}
+              onPointerMove={(e) => handleFloatingPointerMove("footer", e)}
+              onPointerUp={endPointerDrag}
+              onPointerCancel={endPointerDrag}
+              onLostPointerCapture={endPointerDrag}
+              onKeyDown={(e) => handleFloatingKeyDown("footer", e)}
             >
               {showWhatsappIcon && (
                 <span
@@ -1313,7 +1371,7 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
 
         <p className="mt-2.5 flex items-center justify-center gap-1.5 text-[11px] font-medium text-[#8f6c66]">
           <Move size={13} aria-hidden="true" />
-          Arrastrá fotos desde tu carpeta a cada marco y mové logo y texto
+          Mové libremente fotos, títulos, separador, logo y pie de página
         </p>
       </div>
 

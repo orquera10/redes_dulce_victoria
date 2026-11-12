@@ -1074,9 +1074,7 @@
 
 .story-footer-pill {
   position: absolute;
-  left: 50%;
-  bottom: 2.2%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
   z-index: 6;
   display: inline-flex;
   align-items: center;
@@ -1088,8 +1086,37 @@
   color: #563a2a;
   font-weight: 700;
   white-space: nowrap;
-  pointer-events: none;
   box-shadow: 0 4px 12px rgba(73, 43, 38, 0.14);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.story-footer-pill:active,
+.story-footer-pill.is-dragging {
+  cursor: grabbing;
+  box-shadow: 0 8px 24px rgba(73, 43, 38, 0.28);
+}
+
+.story-separator-handle {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  background: transparent;
+  border: 0;
+  padding: 4px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  border-radius: 8px;
+}
+
+.story-separator-handle:hover,
+.story-separator-handle:focus-visible,
+.story-separator-handle.is-dragging {
+  cursor: grabbing;
+  outline: 2px dashed rgba(189, 128, 125, 0.7);
+  outline-offset: 4px;
 }
 
 .story-footer-pill.has-wp {

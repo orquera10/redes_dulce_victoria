@@ -16,6 +16,7 @@ import {
   Sparkles,
   Upload,
 } from "lucide-react";
+import { downloadPngBlob, sharePngBlob } from "../utils/exportImage";
 
 type LogoStudioProps = {
   onNotify: (message: string, duration?: number) => void;
@@ -356,15 +357,8 @@ export function LogoStudio({ onNotify, showHero = true }: LogoStudioProps) {
       );
       if (!blob) throw new Error("Blob failed");
 
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `dulce-victoria-1x1-${Date.now()}.png`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1500);
-      onNotify("Imagen 1:1 descargada en formato PNG (1080 × 1080).");
+      const msg = await downloadPngBlob(blob, `dulce-victoria-1x1-${Date.now()}.png`);
+      onNotify(msg);
     } catch {
       onNotify("No pudimos generar la imagen. Intentá nuevamente.");
     } finally {
@@ -385,18 +379,14 @@ export function LogoStudio({ onNotify, showHero = true }: LogoStudioProps) {
       );
       if (!blob) throw new Error("Blob failed");
 
-      const file = new File([blob], "dulce-victoria-1x1.png", { type: "image/png" });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          title: "Dulce Victoria — Imagen 1:1",
-          files: [file],
-        });
-        onNotify("Imagen compartida.");
-      } else {
-        await handleDownload();
-      }
+      const res = await sharePngBlob(
+        blob,
+        `dulce-victoria-1x1-${Date.now()}.png`,
+        "Dulce Victoria — Imagen 1:1"
+      );
+      onNotify(res.message);
     } catch {
-      onNotify("Compartir cancelado o no disponible en este navegador.");
+      onNotify("Compartir cancelado o no disponible en este dispositivo.");
     } finally {
       setIsExporting(false);
     }
