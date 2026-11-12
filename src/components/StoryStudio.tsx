@@ -12,12 +12,27 @@ import {
   ImagePlus,
   Maximize2,
   Move,
+  Palette,
   RotateCcw,
   Share2,
   Sparkles,
   Type,
   Upload,
 } from "lucide-react";
+import {
+  BAKERY_ICONS,
+  BAKERY_PLACEMENTS,
+  HEART_POINTS_BAKERY,
+  PASTEL_PALETTES,
+  SPARKLE_POINTS,
+  STORY_H,
+  STORY_W,
+  drawStoryBackgroundCanvas,
+  drawTextFrameCanvas,
+  type BgStyle,
+  type PastelPalette,
+  type TextFrameStyle,
+} from "./storyArt";
 
 type StoryStudioProps = {
   onNotify: (message: string, duration?: number) => void;
@@ -41,12 +56,8 @@ type SlotRect = {
   rotateDeg: number;
 };
 
-type BgStyle = "waves" | "botanical" | "hearts" | "clean";
 type FrameStyle = "polaroid" | "tape" | "soft";
 type PhotoCount = 1 | 2 | 3;
-
-const STORY_W = 1080;
-const STORY_H = 1920;
 
 const LAYOUTS: Record<PhotoCount, SlotRect[]> = {
   1: [{ x: 0.035, y: 0.27, w: 0.93, h: 0.59, rotateDeg: -1.0 }],
@@ -76,133 +87,6 @@ function emptySlot(): SlotState {
   return { url: null, natural: { w: 0, h: 0 }, zoom: 1, pan: { x: 0, y: 0 } };
 }
 
-function drawHeart(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  size: number,
-  stroke = "#c98b88",
-  fill?: string
-) {
-  ctx.save();
-  ctx.translate(cx, cy);
-  ctx.beginPath();
-  ctx.moveTo(0, size * 0.3);
-  ctx.bezierCurveTo(size * 0.55, -size * 0.25, size * 0.95, size * 0.35, 0, size * 0.95);
-  ctx.bezierCurveTo(-size * 0.95, size * 0.35, -size * 0.55, -size * 0.25, 0, size * 0.3);
-  if (fill) {
-    ctx.fillStyle = fill;
-    ctx.fill();
-  } else {
-    ctx.strokeStyle = stroke;
-    ctx.lineWidth = Math.max(2, size * 0.11);
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.stroke();
-  }
-  ctx.restore();
-}
-
-function drawBurst(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  dir: 1 | -1,
-  scale = 1
-) {
-  const colors = ["#d89a95", "#9dbdc2", "#e8c48d"];
-  const angles = [-0.42, 0, 0.42];
-  ctx.save();
-  ctx.translate(cx, cy);
-  ctx.scale(dir * scale, scale);
-  angles.forEach((angle, idx) => {
-    ctx.save();
-    ctx.rotate(angle);
-    ctx.strokeStyle = colors[idx];
-    ctx.lineWidth = 6;
-    ctx.lineCap = "round";
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(36, 0);
-    ctx.stroke();
-    ctx.restore();
-  });
-  ctx.restore();
-}
-
-function drawLeafTwig(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  angleDeg: number,
-  scale = 1
-) {
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.rotate((angleDeg * Math.PI) / 180);
-  ctx.scale(scale, scale);
-  ctx.strokeStyle = "#7c524b";
-  ctx.lineWidth = 3.2;
-  ctx.lineCap = "round";
-  ctx.beginPath();
-  ctx.moveTo(0, 0);
-  ctx.bezierCurveTo(38, -58, 72, -110, 140, -185);
-  ctx.stroke();
-
-  const leaves = [
-    { lx: 22, ly: -32, rot: -42, rx: 22, ry: 9 },
-    { lx: 40, ly: -56, rot: 36, rx: 20, ry: 8.5 },
-    { lx: 62, ly: -84, rot: -38, rx: 23, ry: 9.5 },
-    { lx: 84, ly: -112, rot: 32, rx: 21, ry: 8.5 },
-    { lx: 106, ly: -140, rot: -34, rx: 19, ry: 8 },
-    { lx: 124, ly: -164, rot: 26, rx: 17, ry: 7 },
-    { lx: 142, ly: -188, rot: -8, rx: 16, ry: 7 },
-  ];
-  leaves.forEach(({ lx, ly, rot, rx, ry }) => {
-    ctx.save();
-    ctx.translate(lx, ly);
-    ctx.rotate((rot * Math.PI) / 180);
-    ctx.fillStyle = "rgba(232, 184, 180, 0.55)";
-    ctx.strokeStyle = "#7c524b";
-    ctx.lineWidth = 2.6;
-    ctx.beginPath();
-    ctx.ellipse(rx, 0, rx, ry, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(3, 0);
-    ctx.lineTo(rx * 1.55, 0);
-    ctx.stroke();
-    ctx.restore();
-  });
-
-  // Delicate blossom buds near branch tip
-  [
-    { bx: 50, by: -68, r: 6 },
-    { bx: 94, by: -125, r: 5.5 },
-  ].forEach(({ bx, by, r }) => {
-    ctx.fillStyle = "#f4cdc7";
-    ctx.strokeStyle = "#7c524b";
-    ctx.lineWidth = 2.2;
-    ctx.beginPath();
-    ctx.arc(bx, by, r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-  });
-  ctx.restore();
-}
-
-function drawPastelDots(ctx: CanvasRenderingContext2D, dots: Array<[number, number, number, string]>) {
-  dots.forEach(([x, y, r, color]) => {
-    ctx.save();
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  });
-}
-
 function createInitialRects(): Record<PhotoCount, SlotRect[]> {
   return {
     1: LAYOUTS[1].map((r) => ({ ...r })),
@@ -217,8 +101,9 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
   const [slots, setSlots] = useState<SlotState[]>([emptySlot(), emptySlot(), emptySlot()]);
   const [rectsByCount, setRectsByCount] = useState<Record<PhotoCount, SlotRect[]>>(createInitialRects);
 
-  const [bgStyle, setBgStyle] = useState<BgStyle>("botanical");
+  const [bgStyle, setBgStyle] = useState<BgStyle>("bakery");
   const [frameStyle, setFrameStyle] = useState<FrameStyle>("polaroid");
+  const [palette, setPalette] = useState<PastelPalette>(PASTEL_PALETTES[0]);
 
   const [logoPos, setLogoPos] = useState<Point>({ x: 0.5, y: 0.088 });
   const [logoScalePct, setLogoScalePct] = useState(21);
@@ -227,7 +112,7 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
   const [titleScript, setTitleScript] = useState("de hoy");
   const [footerText, setFooterText] = useState("");
   const [showWhatsappIcon, setShowWhatsappIcon] = useState(true);
-  const [hasBrushBg, setHasBrushBg] = useState(true);
+  const [textFrame, setTextFrame] = useState<TextFrameStyle>("scalloped");
   const [textPos, setTextPos] = useState<Point>({ x: 0.5, y: 0.205 });
   const [textScalePct, setTextScalePct] = useState(100);
 
@@ -657,105 +542,7 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("Canvas unavailable");
 
-    // Base cream background
-    ctx.fillStyle = "#f8f4e9";
-    ctx.fillRect(0, 0, STORY_W, STORY_H);
-
-    // Decorative background elements matching Dulce Victoria brand
-    if (bgStyle === "waves" || bgStyle === "botanical" || bgStyle === "hearts") {
-      ctx.fillStyle = "#f1dfda";
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.lineTo(440, 0);
-      ctx.bezierCurveTo(350, 185, 175, 195, 0, 340);
-      ctx.closePath();
-      ctx.fill();
-
-      ctx.beginPath();
-      ctx.moveTo(STORY_W, 0);
-      ctx.lineTo(STORY_W - 360, 0);
-      ctx.bezierCurveTo(STORY_W - 260, 130, STORY_W - 130, 185, STORY_W, 280);
-      ctx.closePath();
-      ctx.fill();
-
-      ctx.beginPath();
-      ctx.moveTo(0, STORY_H);
-      ctx.lineTo(0, STORY_H - 330);
-      ctx.bezierCurveTo(230, STORY_H - 230, 410, STORY_H - 130, 590, STORY_H);
-      ctx.closePath();
-      ctx.fill();
-
-      ctx.beginPath();
-      ctx.moveTo(STORY_W, STORY_H);
-      ctx.lineTo(STORY_W, STORY_H - 360);
-      ctx.bezierCurveTo(STORY_W - 220, STORY_H - 280, STORY_W - 370, STORY_H - 140, STORY_W - 550, STORY_H);
-      ctx.closePath();
-      ctx.fill();
-
-      // Secondary subtle wave line
-      ctx.strokeStyle = "rgba(216, 154, 149, 0.45)";
-      ctx.lineWidth = 3.5;
-      ctx.beginPath();
-      ctx.moveTo(0, 380);
-      ctx.bezierCurveTo(180, 230, 370, 200, 480, 0);
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.moveTo(STORY_W, STORY_H - 390);
-      ctx.bezierCurveTo(STORY_W - 210, STORY_H - 260, STORY_W - 360, STORY_H - 140, STORY_W - 590, STORY_H);
-      ctx.stroke();
-    }
-
-    if (bgStyle === "botanical") {
-      drawLeafTwig(ctx, 16, 300, 16, 1.25);
-      drawLeafTwig(ctx, STORY_W - 16, 330, -142, 1.2);
-      drawLeafTwig(ctx, 24, STORY_H - 24, 14, 1.3);
-      drawLeafTwig(ctx, STORY_W - 24, STORY_H - 30, -152, 1.3);
-      drawPastelDots(ctx, [
-        [230, 100, 7, "#e2b8b3"],
-        [258, 124, 5, "#e8c48d"],
-        [205, 140, 5.5, "#e2b8b3"],
-        [STORY_W - 215, 108, 7, "#e2b8b3"],
-        [STORY_W - 245, 134, 5, "#e8c48d"],
-        [250, STORY_H - 96, 6.5, "#e2b8b3"],
-        [285, STORY_H - 118, 5, "#e8c48d"],
-        [STORY_W - 240, STORY_H - 102, 7, "#e2b8b3"],
-        [STORY_W - 275, STORY_H - 125, 5, "#e8c48d"],
-      ]);
-      drawHeart(ctx, 290, 225, 30);
-      drawHeart(ctx, STORY_W - 290, 225, 30);
-      drawHeart(ctx, 110, STORY_H - 235, 32);
-      drawHeart(ctx, STORY_W - 110, STORY_H - 235, 32);
-      drawHeart(ctx, STORY_W / 2, STORY_H - 72, 28, "#c98b88", "#d89a95");
-    }
-
-    if (bgStyle === "waves") {
-      drawBurst(ctx, 295, 140, -1, 1);
-      drawBurst(ctx, STORY_W - 295, 140, 1, 1);
-      drawHeart(ctx, 130, 310, 36);
-      drawHeart(ctx, STORY_W - 130, 310, 36);
-      drawHeart(ctx, STORY_W / 2, STORY_H - 75, 32);
-      ctx.strokeStyle = "#c98b88";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(STORY_W / 2 - 140, STORY_H - 58);
-      ctx.lineTo(STORY_W / 2 - 42, STORY_H - 58);
-      ctx.moveTo(STORY_W / 2 + 42, STORY_H - 58);
-      ctx.lineTo(STORY_W / 2 + 140, STORY_H - 58);
-      ctx.stroke();
-    }
-
-    if (bgStyle === "hearts") {
-      drawBurst(ctx, 295, 140, -1, 1);
-      drawBurst(ctx, STORY_W - 295, 140, 1, 1);
-      drawHeart(ctx, 118, 280, 40);
-      drawHeart(ctx, 215, 175, 24, "#d89a95", "#e2b2ad");
-      drawHeart(ctx, STORY_W - 118, 280, 40);
-      drawHeart(ctx, STORY_W - 215, 175, 24, "#d89a95", "#e2b2ad");
-      drawHeart(ctx, 90, STORY_H - 220, 36);
-      drawHeart(ctx, STORY_W - 90, STORY_H - 220, 36);
-      drawHeart(ctx, STORY_W / 2, STORY_H - 72, 34, "#c98b88", "#d89a95");
-    }
+    drawStoryBackgroundCanvas(ctx, bgStyle, palette);
 
     // Photos in 1, 2, or 3 frames
     const activeLayout = rectsByCount[photoCount];
@@ -779,7 +566,7 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
       ctx.shadowColor = "rgba(73, 43, 38, 0.18)";
       ctx.shadowBlur = 32;
       ctx.shadowOffsetY = 12;
-      ctx.fillStyle = frameStyle === "soft" ? "#f1dfda" : "#fffefa";
+      ctx.fillStyle = frameStyle === "soft" ? palette.wave : "#fffefa";
       ctx.beginPath();
       ctx.roundRect(-fw / 2, -fh / 2, fw, fh, radius);
       ctx.fill();
@@ -854,28 +641,17 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
     const ty = textPos.y * STORY_H;
 
     if (titleTop.trim() || titleScript.trim()) {
+      drawTextFrameCanvas(ctx, textFrame, tx, ty, scaleFactor, palette);
       ctx.save();
-      if (hasBrushBg) {
-        ctx.fillStyle = "rgba(241, 223, 218, 0.9)";
-        ctx.beginPath();
-        ctx.roundRect(
-          tx - 330 * scaleFactor,
-          ty - 105 * scaleFactor,
-          660 * scaleFactor,
-          215 * scaleFactor,
-          100 * scaleFactor
-        );
-        ctx.fill();
-      }
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       if (titleTop.trim()) {
-        ctx.fillStyle = "#563a2a";
+        ctx.fillStyle = palette.text;
         ctx.font = `600 ${Math.round(74 * scaleFactor)}px "DM Serif Display", Georgia, serif`;
         ctx.fillText(titleTop.trim(), tx, ty - (titleScript.trim() ? 38 * scaleFactor : 0));
       }
       if (titleScript.trim()) {
-        ctx.fillStyle = "#bd807d";
+        ctx.fillStyle = palette.accent;
         ctx.font = `700 ${Math.round(108 * scaleFactor)}px "Dancing Script", cursive`;
         ctx.fillText(titleScript.trim(), tx, ty + (titleTop.trim() ? 48 * scaleFactor : 0));
       }
@@ -898,7 +674,7 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
       ctx.shadowBlur = 18;
       ctx.shadowOffsetY = 6;
       ctx.fillStyle = "#fffefa";
-      ctx.strokeStyle = "#d7b7ae";
+      ctx.strokeStyle = palette.accent;
       ctx.lineWidth = 3.5;
       ctx.beginPath();
       ctx.roundRect(px, py, pillW, pillH, pillH / 2);
@@ -913,8 +689,8 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
         const iconCx = startX + 27;
         const r = 27;
 
-        // Dusty-rose circular WhatsApp badge
-        ctx.fillStyle = "#bd807d";
+        // Circular WhatsApp badge in active accent color
+        ctx.fillStyle = palette.accent;
         ctx.beginPath();
         ctx.arc(iconCx, cy, r, 0, Math.PI * 2);
         ctx.fill();
@@ -953,12 +729,12 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
         ctx.fill();
         ctx.restore();
 
-        ctx.fillStyle = "#563a2a";
+        ctx.fillStyle = palette.text;
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
         ctx.fillText(label, startX + 72, cy + 1, pillW - 130);
       } else {
-        ctx.fillStyle = "#563a2a";
+        ctx.fillStyle = palette.text;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(label, STORY_W / 2, cy + 1, pillW - 72);
@@ -1023,7 +799,7 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
   return (
     <div className="mt-2 grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,370px)_1fr] md:items-start md:gap-8">
       <div>
-        <div ref={stageRef} className="story-stage">
+        <div ref={stageRef} className="story-stage" style={{ background: palette.bg }}>
           {/* Background SVG decorations */}
           <svg
             className="story-bg-svg"
@@ -1031,122 +807,165 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
             preserveAspectRatio="none"
             aria-hidden="true"
           >
-            {(bgStyle === "waves" || bgStyle === "botanical" || bgStyle === "hearts") && (
-              <>
-                <g fill="#f1dfda">
-                  <path d="M0,0 L440,0 C350,185 175,195 0,340 Z" />
-                  <path d="M1080,0 L720,0 C820,130 950,185 1080,280 Z" />
-                  <path d="M0,1920 L0,1590 C230,1690 410,1790 590,1920 Z" />
-                  <path d="M1080,1920 L1080,1560 C860,1640 710,1780 530,1920 Z" />
-                </g>
-                <g fill="none" stroke="rgba(216,154,149,0.45)" strokeWidth="3.5">
-                  <path d="M0,380 C180,230 370,200 480,0" />
-                  <path d="M1080,1530 C870,1660 720,1780 490,1920" />
-                </g>
-              </>
-            )}
+            <g fill={palette.wave}>
+              <path d="M0,0 L430,0 C335,175 165,185 0,325 Z" />
+              <path d="M1080,0 L730,0 C830,125 955,180 1080,270 Z" />
+              <path d="M0,1920 L0,1610 C220,1705 395,1800 560,1920 Z" />
+              <path d="M1080,1920 L1080,1580 C870,1665 725,1795 550,1920 Z" />
+            </g>
 
-            {(bgStyle === "waves" || bgStyle === "hearts") && (
-              <g strokeLinecap="round" strokeWidth="6.5">
-                <line x1="295" y1="140" x2="258" y2="124" stroke="#d89a95" />
-                <line x1="295" y1="140" x2="255" y2="142" stroke="#9dbdc2" />
-                <line x1="295" y1="140" x2="262" y2="158" stroke="#e8c48d" />
-                <line x1="785" y1="140" x2="822" y2="124" stroke="#d89a95" />
-                <line x1="785" y1="140" x2="825" y2="142" stroke="#9dbdc2" />
-                <line x1="785" y1="140" x2="818" y2="158" stroke="#e8c48d" />
-                <path
-                  d="M130,322 C150,300 165,325 130,350 C95,325 110,300 130,322 Z"
-                  fill="none"
-                  stroke="#c98b88"
-                  strokeWidth="4.5"
-                />
-                <path
-                  d="M950,322 C970,300 985,325 950,350 C915,325 930,300 950,322 Z"
-                  fill="none"
-                  stroke="#c98b88"
-                  strokeWidth="4.5"
-                />
-                <path
-                  d="M540,1855 C560,1835 574,1858 540,1880 C506,1858 520,1835 540,1855 Z"
-                  fill={bgStyle === "hearts" ? "#d89a95" : "none"}
-                  stroke="#c98b88"
-                  strokeWidth="4.5"
-                />
-                {bgStyle === "waves" && (
-                  <g stroke="#c98b88" strokeWidth="3">
-                    <line x1="400" y1="1862" x2="498" y2="1862" />
-                    <line x1="582" y1="1862" x2="680" y2="1862" />
-                  </g>
-                )}
+            {bgStyle !== "clean" && (
+              <g fill="none" stroke={palette.accent} strokeOpacity="0.42" strokeWidth="3">
+                <path d="M0,360 C175,215 360,185 465,0" />
+                <path d="M1080,1550 C875,1675 730,1790 515,1920" />
               </g>
             )}
 
-            {bgStyle === "hearts" && (
+            {bgStyle === "bakery" && (
               <g>
-                <path d="M215,182 C228,168 238,184 215,200 C192,184 202,168 215,182 Z" fill="#e2b2ad" />
-                <path d="M865,182 C878,168 888,184 865,200 C842,184 852,168 865,182 Z" fill="#e2b2ad" />
-                <path d="M90,1705 C110,1685 125,1708 90,1732 C55,1708 70,1685 90,1705 Z" fill="none" stroke="#c98b88" strokeWidth="4.5" />
-                <path d="M990,1705 C1010,1685 1025,1708 990,1732 C955,1708 970,1685 990,1705 Z" fill="none" stroke="#c98b88" strokeWidth="4.5" />
+                {BAKERY_PLACEMENTS.map((item, idx) => {
+                  const icon = BAKERY_ICONS[item.kind];
+                  return (
+                    <g
+                      key={idx}
+                      transform={`translate(${item.x} ${item.y}) rotate(${item.rotate}) scale(${item.scale})`}
+                    >
+                      {icon.fills.map((d, fIdx) => (
+                        <path key={fIdx} d={d} fill={palette.wave} />
+                      ))}
+                      {icon.strokes.map((d, sIdx) => (
+                        <path
+                          key={sIdx}
+                          d={d}
+                          fill="none"
+                          stroke={palette.text}
+                          strokeWidth="2.4"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      ))}
+                    </g>
+                  );
+                })}
+                {SPARKLE_POINTS.map(([sx, sy, sr], idx) => (
+                  <path
+                    key={`sp-${idx}`}
+                    transform={`translate(${sx} ${sy})`}
+                    d={`M0,${-sr} Q0,0 ${sr},0 Q0,0 0,${sr} Q0,0 ${-sr},0 Q0,0 0,${-sr} Z`}
+                    fill="none"
+                    stroke={palette.accent}
+                    strokeWidth="2.6"
+                    strokeLinejoin="round"
+                  />
+                ))}
+                {HEART_POINTS_BAKERY.map(([hx, hy, hs, filled], idx) => (
+                  <path
+                    key={`hb-${idx}`}
+                    transform={`translate(${hx} ${hy})`}
+                    d={`M0,${hs * 0.3} C${hs * 0.55},${-hs * 0.25} ${hs * 0.95},${hs * 0.35} 0,${hs * 0.95} C${-hs * 0.95},${hs * 0.35} ${-hs * 0.55},${-hs * 0.25} 0,${hs * 0.3} Z`}
+                    fill={filled ? palette.accent : "none"}
+                    stroke={palette.accent}
+                    strokeWidth="2.8"
+                    strokeLinejoin="round"
+                  />
+                ))}
               </g>
             )}
 
             {bgStyle === "botanical" && (
               <g>
-                {/* Top-left branch */}
-                <g transform="translate(16 300) rotate(16) scale(1.25)" stroke="#7c524b" fill="rgba(232,184,180,0.55)">
-                  <path d="M0,0 C38,-58 72,-110 140,-185" fill="none" strokeWidth="3.2" strokeLinecap="round" />
-                  <ellipse cx="42" cy="-36" rx="22" ry="9" transform="rotate(-42 22 -32)" strokeWidth="2.6" />
-                  <ellipse cx="58" cy="-58" rx="20" ry="8.5" transform="rotate(36 40 -56)" strokeWidth="2.6" />
-                  <ellipse cx="82" cy="-86" rx="23" ry="9.5" transform="rotate(-38 62 -84)" strokeWidth="2.6" />
-                  <ellipse cx="102" cy="-114" rx="21" ry="8.5" transform="rotate(32 84 -112)" strokeWidth="2.6" />
-                  <ellipse cx="122" cy="-142" rx="19" ry="8" transform="rotate(-34 106 -140)" strokeWidth="2.6" />
-                  <ellipse cx="140" cy="-165" rx="17" ry="7" transform="rotate(26 124 -164)" strokeWidth="2.6" />
-                  <circle cx="50" cy="-68" r="6" fill="#f4cdc7" strokeWidth="2.2" />
-                  <circle cx="94" cy="-125" r="5.5" fill="#f4cdc7" strokeWidth="2.2" />
-                </g>
-                {/* Top-right branch */}
-                <g transform="translate(1064 330) rotate(-142) scale(1.2)" stroke="#7c524b" fill="rgba(232,184,180,0.55)">
-                  <path d="M0,0 C38,-58 72,-110 140,-185" fill="none" strokeWidth="3.2" strokeLinecap="round" />
-                  <ellipse cx="42" cy="-36" rx="22" ry="9" transform="rotate(-42 22 -32)" strokeWidth="2.6" />
-                  <ellipse cx="58" cy="-58" rx="20" ry="8.5" transform="rotate(36 40 -56)" strokeWidth="2.6" />
-                  <ellipse cx="82" cy="-86" rx="23" ry="9.5" transform="rotate(-38 62 -84)" strokeWidth="2.6" />
-                  <ellipse cx="102" cy="-114" rx="21" ry="8.5" transform="rotate(32 84 -112)" strokeWidth="2.6" />
-                  <ellipse cx="122" cy="-142" rx="19" ry="8" transform="rotate(-34 106 -140)" strokeWidth="2.6" />
-                  <circle cx="50" cy="-68" r="6" fill="#f4cdc7" strokeWidth="2.2" />
-                </g>
-                {/* Bottom-left branch */}
-                <g transform="translate(24 1896) rotate(14) scale(1.3)" stroke="#7c524b" fill="rgba(232,184,180,0.55)">
-                  <path d="M0,0 C38,-58 72,-110 140,-185" fill="none" strokeWidth="3.2" strokeLinecap="round" />
-                  <ellipse cx="42" cy="-36" rx="22" ry="9" transform="rotate(-42 22 -32)" strokeWidth="2.6" />
-                  <ellipse cx="58" cy="-58" rx="20" ry="8.5" transform="rotate(36 40 -56)" strokeWidth="2.6" />
-                  <ellipse cx="82" cy="-86" rx="23" ry="9.5" transform="rotate(-38 62 -84)" strokeWidth="2.6" />
-                  <ellipse cx="102" cy="-114" rx="21" ry="8.5" transform="rotate(32 84 -112)" strokeWidth="2.6" />
-                  <ellipse cx="122" cy="-142" rx="19" ry="8" transform="rotate(-34 106 -140)" strokeWidth="2.6" />
-                  <circle cx="94" cy="-125" r="5.5" fill="#f4cdc7" strokeWidth="2.2" />
-                </g>
-                {/* Bottom-right branch */}
-                <g transform="translate(1056 1890) rotate(-152) scale(1.3)" stroke="#7c524b" fill="rgba(232,184,180,0.55)">
-                  <path d="M0,0 C38,-58 72,-110 140,-185" fill="none" strokeWidth="3.2" strokeLinecap="round" />
-                  <ellipse cx="42" cy="-36" rx="22" ry="9" transform="rotate(-42 22 -32)" strokeWidth="2.6" />
-                  <ellipse cx="58" cy="-58" rx="20" ry="8.5" transform="rotate(36 40 -56)" strokeWidth="2.6" />
-                  <ellipse cx="82" cy="-86" rx="23" ry="9.5" transform="rotate(-38 62 -84)" strokeWidth="2.6" />
-                  <ellipse cx="102" cy="-114" rx="21" ry="8.5" transform="rotate(32 84 -112)" strokeWidth="2.6" />
-                  <ellipse cx="122" cy="-142" rx="19" ry="8" transform="rotate(-34 106 -140)" strokeWidth="2.6" />
-                  <circle cx="94" cy="-125" r="5.5" fill="#f4cdc7" strokeWidth="2.2" />
-                </g>
-                {/* Confetti dots & hearts */}
-                <circle cx="230" cy="100" r="7" fill="#e2b8b3" />
-                <circle cx="258" cy="124" r="5" fill="#e8c48d" />
-                <circle cx="205" cy="140" r="5.5" fill="#e2b8b3" />
-                <circle cx="865" cy="108" r="7" fill="#e2b8b3" />
-                <circle cx="835" cy="134" r="5" fill="#e8c48d" />
-                <circle cx="250" cy="1824" r="6.5" fill="#e2b8b3" />
-                <circle cx="285" cy="1802" r="5" fill="#e8c48d" />
-                <circle cx="840" cy="1818" r="7" fill="#e2b8b3" />
-                <circle cx="805" cy="1795" r="5" fill="#e8c48d" />
-                <path d="M290,234 C306,218 318,236 290,255 C262,236 274,218 290,234 Z" fill="none" stroke="#c98b88" strokeWidth="4" />
-                <path d="M790,234 C806,218 818,236 790,255 C762,236 774,218 790,234 Z" fill="none" stroke="#c98b88" strokeWidth="4" />
-                <path d="M540,1855 C556,1840 568,1858 540,1876 C512,1858 524,1840 540,1855 Z" fill="#d89a95" />
+                {[
+                  { x: 26, y: 285, rot: 8, scale: 1.15 },
+                  { x: 1054, y: 285, rot: -98, scale: 1.12 },
+                  { x: 30, y: 1894, rot: 12, scale: 1.15 },
+                  { x: 1050, y: 1894, rot: -104, scale: 1.15 },
+                ].map((sp, idx) => (
+                  <g
+                    key={idx}
+                    transform={`translate(${sp.x} ${sp.y}) rotate(${sp.rot}) scale(${sp.scale})`}
+                    stroke={palette.text}
+                    fill={palette.wave}
+                  >
+                    <path d="M0,0 Q42,-52 92,-110" fill="none" strokeWidth="2.6" strokeLinecap="round" />
+                    <ellipse cx="0" cy="-11" rx="6.5" ry="13" transform="translate(22 -26) rotate(-42)" strokeWidth="2.2" />
+                    <ellipse cx="0" cy="-11" rx="6.5" ry="13" transform="translate(32 -38) rotate(34)" strokeWidth="2.2" />
+                    <ellipse cx="0" cy="-11" rx="6.5" ry="13" transform="translate(48 -58) rotate(-38)" strokeWidth="2.2" />
+                    <ellipse cx="0" cy="-11" rx="6.5" ry="13" transform="translate(58 -70) rotate(32)" strokeWidth="2.2" />
+                    <ellipse cx="0" cy="-11" rx="6.5" ry="13" transform="translate(74 -90) rotate(-34)" strokeWidth="2.2" />
+                    <ellipse cx="0" cy="-11" rx="6.5" ry="13" transform="translate(92 -110) rotate(4)" strokeWidth="2.2" />
+                  </g>
+                ))}
+                {SPARKLE_POINTS.map(([sx, sy, sr], idx) => (
+                  <path
+                    key={`bsp-${idx}`}
+                    transform={`translate(${sx} ${sy})`}
+                    d={`M0,${-sr} Q0,0 ${sr},0 Q0,0 0,${sr} Q0,0 ${-sr},0 Q0,0 0,${-sr} Z`}
+                    fill="none"
+                    stroke={palette.accent}
+                    strokeWidth="2.6"
+                  />
+                ))}
+                <path
+                  d="M265,202 C278,189 288,203 265,218 C242,203 252,189 265,202 Z"
+                  fill="none"
+                  stroke={palette.accent}
+                  strokeWidth="3.2"
+                />
+                <path
+                  d="M815,202 C828,189 838,203 815,218 C792,203 802,189 815,202 Z"
+                  fill="none"
+                  stroke={palette.accent}
+                  strokeWidth="3.2"
+                />
+              </g>
+            )}
+
+            {bgStyle === "waves" && (
+              <g strokeLinecap="round" strokeWidth="5.5" stroke={palette.accent}>
+                <line x1="285" y1="136" x2="253" y2="122" />
+                <line x1="285" y1="136" x2="249" y2="136" />
+                <line x1="285" y1="136" x2="253" y2="150" />
+                <line x1="795" y1="136" x2="827" y2="122" />
+                <line x1="795" y1="136" x2="831" y2="136" />
+                <line x1="795" y1="136" x2="827" y2="150" />
+                <path
+                  d="M118,300 C134,282 146,302 118,322 C90,302 102,282 118,300 Z"
+                  fill="none"
+                  strokeWidth="3.8"
+                />
+                <path
+                  d="M962,300 C978,282 990,302 962,322 C934,302 946,282 962,300 Z"
+                  fill="none"
+                  strokeWidth="3.8"
+                />
+                <path
+                  d="M540,1748 C554,1734 564,1750 540,1766 C516,1750 526,1734 540,1748 Z"
+                  fill={palette.accent}
+                  stroke="none"
+                />
+                <line x1="400" y1="1754" x2="498" y2="1754" strokeWidth="2.8" />
+                <line x1="582" y1="1754" x2="680" y2="1754" strokeWidth="2.8" />
+              </g>
+            )}
+
+            {bgStyle === "hearts" && (
+              <g>
+                <path d="M118,275 C136,256 150,278 118,300 C86,278 100,256 118,275 Z" fill="none" stroke={palette.accent} strokeWidth="4" />
+                <path d="M962,275 C980,256 994,278 962,300 C930,278 944,256 962,275 Z" fill="none" stroke={palette.accent} strokeWidth="4" />
+                <path d="M218,172 C230,159 240,174 218,189 C196,174 206,159 218,172 Z" fill={palette.wave} stroke={palette.accent} strokeWidth="2.6" />
+                <path d="M862,172 C874,159 884,174 862,189 C840,174 850,159 862,172 Z" fill={palette.wave} stroke={palette.accent} strokeWidth="2.6" />
+                <path d="M96,1720 C114,1702 128,1723 96,1744 C64,1723 78,1702 96,1720 Z" fill="none" stroke={palette.accent} strokeWidth="4" />
+                <path d="M984,1720 C1002,1702 1016,1723 984,1744 C952,1723 966,1702 984,1720 Z" fill="none" stroke={palette.accent} strokeWidth="4" />
+                {SPARKLE_POINTS.map(([sx, sy, sr], idx) => (
+                  <path
+                    key={`hsp-${idx}`}
+                    transform={`translate(${sx} ${sy})`}
+                    d={`M0,${-sr} Q0,0 ${sr},0 Q0,0 0,${sr} Q0,0 ${-sr},0 Q0,0 0,${-sr} Z`}
+                    fill="none"
+                    stroke={palette.accent}
+                    strokeWidth="2.6"
+                  />
+                ))}
               </g>
             )}
           </svg>
@@ -1287,7 +1106,7 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
           {(titleTop.trim() || titleScript.trim()) && (
             <button
               type="button"
-              className={`story-text-handle ${hasBrushBg ? "has-brush" : ""} ${
+              className={`story-text-handle ${
                 draggingItem === "text" ? "is-dragging" : ""
               }`}
               style={{
@@ -1303,18 +1122,55 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
               onLostPointerCapture={endPointerDrag}
               onKeyDown={(e) => handleFloatingKeyDown("text", e)}
             >
+              {textFrame !== "none" && (
+                <svg
+                  className="pointer-events-none absolute inset-[-14%_-16%] h-[128%] w-[132%] overflow-visible"
+                  viewBox="-370 -145 740 270"
+                  preserveAspectRatio="none"
+                  aria-hidden="true"
+                >
+                  {textFrame === "brush" && (
+                    <rect x="-330" y="-105" width="660" height="215" rx="100" fill={palette.wave} fillOpacity="0.92" />
+                  )}
+                  {textFrame === "scalloped" && (
+                    <>
+                      <rect x="-340" y="-112" width="680" height="224" rx="52" fill="#fffefa" stroke={palette.accent} strokeWidth="4.5" />
+                      <rect x="-322" y="-96" width="644" height="192" rx="40" fill="none" stroke={palette.accent} strokeWidth="2.6" strokeDasharray="12 9" />
+                    </>
+                  )}
+                  {textFrame === "heart-label" && (
+                    <>
+                      <rect x="-340" y="-108" width="680" height="216" rx="36" fill={palette.bg} stroke={palette.text} strokeWidth="4" />
+                      <rect x="-324" y="-93" width="648" height="186" rx="26" fill="none" stroke={palette.wave} strokeWidth="8" />
+                      <path
+                        d="M0,-116 C14,-130 24,-115 0,-99 C-24,-115 -14,-130 0,-116 Z"
+                        fill={palette.wave}
+                        stroke={palette.accent}
+                        strokeWidth="3"
+                      />
+                    </>
+                  )}
+                  {textFrame === "ribbon" && (
+                    <>
+                      <path d="M-360,-76 L-270,-76 L-270,96 L-360,96 L-330,10 Z" fill={palette.accent} />
+                      <path d="M360,-76 L270,-76 L270,96 L360,96 L330,10 Z" fill={palette.accent} />
+                      <rect x="-300" y="-100" width="600" height="200" rx="24" fill={palette.wave} stroke={palette.accent} strokeWidth="3" />
+                    </>
+                  )}
+                </svg>
+              )}
               {titleTop.trim() && (
                 <span
-                  className="story-title-serif"
-                  style={{ fontSize: `${Math.round(74 * uiScale)}px` }}
+                  className="story-title-serif relative z-10"
+                  style={{ fontSize: `${Math.round(74 * uiScale)}px`, color: palette.text }}
                 >
                   {titleTop}
                 </span>
               )}
               {titleScript.trim() && (
                 <span
-                  className="story-title-script"
-                  style={{ fontSize: `${Math.round(108 * uiScale)}px` }}
+                  className="story-title-script relative z-10"
+                  style={{ fontSize: `${Math.round(108 * uiScale)}px`, color: palette.accent }}
                 >
                   {titleScript}
                 </span>
@@ -1326,10 +1182,18 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
           {footerText.trim() && (
             <div
               className={`story-footer-pill ${showWhatsappIcon ? "has-wp" : ""}`}
-              style={{ fontSize: `${Math.max(10, Math.round(36 * uiScale))}px` }}
+              style={{
+                fontSize: `${Math.max(10, Math.round(36 * uiScale))}px`,
+                borderColor: palette.accent,
+                color: palette.text,
+              }}
             >
               {showWhatsappIcon && (
-                <span className="story-wp-badge" aria-hidden="true">
+                <span
+                  className="story-wp-badge"
+                  aria-hidden="true"
+                  style={{ backgroundColor: palette.accent }}
+                >
                   <svg viewBox="0 0 24 24" className="h-[62%] w-[62%]" fill="none">
                     <path
                       d="M12 3.2a8.6 8.6 0 0 0-7.45 12.9L3.5 20.5l4.55-1.02A8.6 8.6 0 1 0 12 3.2Z"
@@ -1522,19 +1386,32 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
 
         {/* Text controls */}
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="space-y-1.5">
             <p className="studio-label flex items-center gap-1.5">
               <Type size={13} aria-hidden="true" />
-              Texto al estilo del logo
+              Texto y marquito
             </p>
-            <button
-              type="button"
-              className="studio-chip"
-              aria-pressed={hasBrushBg}
-              onClick={() => setHasBrushBg((v) => !v)}
-            >
-              Fondo pincelada
-            </button>
+            <div className="flex flex-wrap gap-1.5">
+              {(
+                [
+                  ["scalloped", "Etiqueta"],
+                  ["heart-label", "Corazón"],
+                  ["ribbon", "Cinta"],
+                  ["brush", "Pincelada"],
+                  ["none", "Sin marco"],
+                ] as [TextFrameStyle, string][]
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  className="studio-chip"
+                  aria-pressed={textFrame === id}
+                  onClick={() => setTextFrame(id)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-1.5">
@@ -1679,8 +1556,9 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
             <div className="flex flex-wrap gap-1.5">
               {(
                 [
-                  ["waves", "Ondas"],
+                  ["bakery", "Pastelería"],
                   ["botanical", "Botánico"],
+                  ["waves", "Ondas"],
                   ["hearts", "Corazones"],
                   ["clean", "Limpio"],
                 ] as [BgStyle, string][]
@@ -1696,6 +1574,76 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
                 </button>
               ))}
             </div>
+          </div>
+        </div>
+
+        {/* Pastel Color Palette */}
+        <div className="space-y-2.5 rounded-[16px] border border-[#e6d5cd] bg-[#fcf8f4] p-3">
+          <p className="studio-label flex items-center gap-1.5">
+            <Palette size={13} aria-hidden="true" />
+            Paleta de colores pastel
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {PASTEL_PALETTES.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                className="studio-chip inline-flex items-center gap-1.5"
+                aria-pressed={
+                  palette.bg === preset.bg &&
+                  palette.wave === preset.wave &&
+                  palette.accent === preset.accent &&
+                  palette.text === preset.text
+                }
+                onClick={() => setPalette(preset)}
+              >
+                <span className="inline-flex -space-x-1" aria-hidden="true">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full border border-black/15"
+                    style={{ background: preset.bg }}
+                  />
+                  <span
+                    className="h-2.5 w-2.5 rounded-full border border-black/15"
+                    style={{ background: preset.wave }}
+                  />
+                  <span
+                    className="h-2.5 w-2.5 rounded-full border border-black/15"
+                    style={{ background: preset.accent }}
+                  />
+                </span>
+                {preset.label}
+              </button>
+            ))}
+          </div>
+          <div className="grid grid-cols-4 gap-2 pt-0.5">
+            {(
+              [
+                ["bg", "Fondo"],
+                ["wave", "Ondas"],
+                ["accent", "Acento"],
+                ["text", "Texto"],
+              ] as [keyof Omit<PastelPalette, "id" | "label">, string][]
+            ).map(([key, label]) => (
+              <label
+                key={key}
+                className="flex cursor-pointer flex-col items-center gap-1 rounded-[10px] border border-[#e8dad3] bg-white px-2 py-1.5 text-[10px] font-semibold text-[#694635]"
+              >
+                <input
+                  type="color"
+                  value={palette[key]}
+                  aria-label={`Color de ${label}`}
+                  onChange={(e) =>
+                    setPalette((prev) => ({
+                      ...prev,
+                      id: "custom",
+                      [key]: e.target.value,
+                    }))
+                  }
+                  className="h-5 w-full cursor-pointer rounded border-0 bg-transparent p-0"
+                />
+                <span>{label}</span>
+              </label>
+            ))}
           </div>
         </div>
 
