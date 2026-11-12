@@ -15,9 +15,11 @@ import {
   Palette,
   RotateCcw,
   Share2,
+  Sliders,
   Sparkles,
   Type,
   Upload,
+  X,
 } from "lucide-react";
 import { downloadPngBlob, sharePngBlob } from "../utils/exportImage";
 import {
@@ -128,10 +130,14 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
   const [dragOverSlot, setDragOverSlot] = useState<number | null>(null);
   const [draggingItem, setDraggingItem] = useState<string | null>(null);
   const [stageSize, setStageSize] = useState<Size>({ w: 320, h: 568 });
+  const [activeElementModal, setActiveElementModal] = useState<
+    "frame" | "text" | "separator" | "logo" | "footer" | null
+  >(null);
   const [isExporting, setIsExporting] = useState(false);
   const [liveStatus, setLiveStatus] = useState("");
 
   const stageRef = useRef<HTMLDivElement>(null);
+  const mobileSheetRef = useRef<HTMLDialogElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadTargetSlotRef = useRef(0);
   const slotImagesRef = useRef<(HTMLImageElement | null)[]>([null, null, null]);
@@ -426,6 +432,27 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
     };
   };
 
+  const isMobileViewport = () =>
+    typeof window !== "undefined" && window.innerWidth < 768;
+
+  const openElementSheet = (kind: "frame" | "text" | "separator" | "logo" | "footer") => {
+    setActiveElementModal(kind);
+    if (isMobileViewport()) {
+      const dlg = mobileSheetRef.current;
+      if (dlg && !dlg.open) {
+        dlg.showModal();
+      }
+    }
+  };
+
+  const closeElementSheet = () => {
+    const dlg = mobileSheetRef.current;
+    if (dlg && dlg.open) {
+      dlg.close();
+    }
+    setActiveElementModal(null);
+  };
+
   const handleFloatingPointerDown = (
     kind: "logo" | "text" | "separator" | "footer",
     event: ReactPointerEvent<HTMLButtonElement | HTMLDivElement>
@@ -489,8 +516,23 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
+    const movedDist = Math.hypot(
+      event.clientX - origin.startX,
+      event.clientY - origin.startY
+    );
+    const wasTap = movedDist < 6;
+    const itemKind = origin.kind;
+
     dragOriginRef.current = null;
     setDraggingItem(null);
+
+    if (wasTap && isMobileViewport()) {
+      if (itemKind === "slot" || itemKind === "frame-move" || itemKind === "frame-resize") {
+        openElementSheet("frame");
+      } else if (itemKind === "logo" || itemKind === "text" || itemKind === "separator" || itemKind === "footer") {
+        openElementSheet(itemKind);
+      }
+    }
   };
 
   const handleFloatingKeyDown = (
@@ -1371,7 +1413,7 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
 
         <p className="mt-2.5 flex items-center justify-center gap-1.5 text-[11px] font-medium text-[#8f6c66]">
           <Move size={13} aria-hidden="true" />
-          Mové libremente fotos, títulos, separador, logo y pie de página
+          Tocá cualquier elemento para abrir sus controles y arrastralo para moverlo
         </p>
       </div>
 
@@ -1857,6 +1899,316 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
           {liveStatus}
         </div>
       </div>
+
+      {/* Native Mobile Bottom Sheet Dialog */}
+      <dialog
+        ref={mobileSheetRef}
+        className="story-mobile-sheet md:hidden"
+        aria-labelledby="story-sheet-title"
+        onClick={(e) => {
+          if (e.target === mobileSheetRef.current) closeElementSheet();
+        }}
+        onCancel={closeElementSheet}
+      >
+        <div className="story-sheet-handle-bar" aria-hidden="true" />
+        <div className="flex items-center justify-between border-b border-[#ebdcd5] px-4 py-2">
+          <div className="flex items-center gap-1.5">
+            <Sliders size={15} className="text-[#9b5962]" aria-hidden="true" />
+            <h2 id="story-sheet-title" className="text-[13px] font-bold text-[#563a2a]">
+              {activeElementModal === "frame" && `Editar Marco: Foto ${selectedSlot + 1}`}
+              {activeElementModal === "text" && "Editar Título y Estilo"}
+              {activeElementModal === "separator" && "Editar Separador"}
+              {activeElementModal === "logo" && "Ajustar Tamaño del Logo"}
+              {activeElementModal === "footer" && "Editar Pie de Página"}
+              {!activeElementModal && "Controles del Elemento"}
+            </h2>
+          </div>
+          <button
+            type="button"
+            className="flex h-7 w-7 items-center justify-center rounded-full text-[#8a6861] hover:bg-[#f6eae5]"
+            onClick={closeElementSheet}
+            aria-label="Cerrar controles"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="story-sheet-body space-y-4">
+          {activeElementModal === "frame" && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[12px] font-semibold text-[#694635]">
+                  Marco {selectedSlot + 1} de {photoCount}
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className="studio-chip"
+                    onClick={() => triggerUploadForSlot(selectedSlot)}
+                  >
+                    <Upload size={13} className="mr-1 inline" aria-hidden="true" />
+                    {currentSlot?.url ? "Cambiar foto" : "Subir foto"}
+                  </button>
+                  {currentSlot?.url && (
+                    <button
+                      type="button"
+                      className="studio-chip"
+                      onClick={() =>
+                        setSlots((prev) =>
+                          prev.map((s, idx) =>
+                            idx === selectedSlot ? { ...s, zoom: 1, pan: { x: 0, y: 0 } } : s
+                          )
+                        )
+                      }
+                    >
+                      <RotateCcw size={13} className="mr-1 inline" aria-hidden="true" />
+                      Centrar
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <div className="mb-1 flex items-center justify-between">
+                  <label htmlFor="sheet-slot-zoom" className="studio-label">
+                    Zoom de la foto
+                  </label>
+                  <span className="text-[11px] font-bold text-[#694635]">
+                    {Math.round((currentSlot?.zoom || 1) * 100)}%
+                  </span>
+                </div>
+                <input
+                  id="sheet-slot-zoom"
+                  type="range"
+                  min={1}
+                  max={2.4}
+                  step={0.05}
+                  value={currentSlot?.zoom || 1}
+                  disabled={!currentSlot?.url}
+                  onChange={(e) => {
+                    const zoom = Number(e.target.value);
+                    setSlots((prev) =>
+                      prev.map((s, idx) => (idx === selectedSlot ? { ...s, zoom } : s))
+                    );
+                  }}
+                  className="studio-range"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="mb-1 flex items-center justify-between">
+                    <label htmlFor="sheet-frame-w" className="studio-label">
+                      Ancho
+                    </label>
+                    <span className="text-[11px] font-bold text-[#694635]">
+                      {Math.round(currentRect.w * 100)}%
+                    </span>
+                  </div>
+                  <input
+                    id="sheet-frame-w"
+                    type="range"
+                    min={22}
+                    max={96}
+                    step={1}
+                    value={Math.round(currentRect.w * 100)}
+                    onChange={(e) => {
+                      const nextW = Number(e.target.value) / 100;
+                      updateSlotRect(selectedSlot, (r) => ({
+                        ...r,
+                        w: nextW,
+                        x: clamp(r.x, 0, Math.max(0, 1 - nextW)),
+                      }));
+                    }}
+                    className="studio-range"
+                  />
+                </div>
+                <div>
+                  <div className="mb-1 flex items-center justify-between">
+                    <label htmlFor="sheet-frame-h" className="studio-label">
+                      Alto
+                    </label>
+                    <span className="text-[11px] font-bold text-[#694635]">
+                      {Math.round(currentRect.h * 100)}%
+                    </span>
+                  </div>
+                  <input
+                    id="sheet-frame-h"
+                    type="range"
+                    min={14}
+                    max={75}
+                    step={1}
+                    value={Math.round(currentRect.h * 100)}
+                    onChange={(e) => {
+                      const nextH = Number(e.target.value) / 100;
+                      updateSlotRect(selectedSlot, (r) => ({
+                        ...r,
+                        h: nextH,
+                        y: clamp(r.y, 0, Math.max(0, 1 - nextH)),
+                      }));
+                    }}
+                    className="studio-range"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeElementModal === "text" && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="sheet-title-top" className="studio-label mb-1">
+                    Línea 1 (Serif)
+                  </label>
+                  <input
+                    id="sheet-title-top"
+                    type="text"
+                    className="story-input"
+                    value={titleTop}
+                    onChange={(e) => setTitleTop(e.target.value)}
+                    placeholder="Ej: Pedidos del día"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="sheet-title-script" className="studio-label mb-1">
+                    Línea 2 (Cursiva)
+                  </label>
+                  <input
+                    id="sheet-title-script"
+                    type="text"
+                    className="story-input"
+                    value={titleScript}
+                    onChange={(e) => setTitleScript(e.target.value)}
+                    placeholder="Ej: de hoy"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <p className="studio-label mb-1.5">Estilo del marquito</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {(
+                    [
+                      ["scalloped", "Etiqueta"],
+                      ["heart-label", "Corazón"],
+                      ["ribbon", "Cinta"],
+                      ["brush", "Pincelada"],
+                      ["none", "Sin marco"],
+                    ] as [TextFrameStyle, string][]
+                  ).map(([id, label]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      className="studio-chip"
+                      aria-pressed={textFrame === id}
+                      onClick={() => setTextFrame(id)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <div className="mb-1 flex items-center justify-between">
+                  <label htmlFor="sheet-text-size" className="studio-label">
+                    Tamaño del texto
+                  </label>
+                  <span className="text-[11px] font-bold text-[#694635]">{textScalePct}%</span>
+                </div>
+                <input
+                  id="sheet-text-size"
+                  type="range"
+                  min={70}
+                  max={135}
+                  step={5}
+                  value={textScalePct}
+                  onChange={(e) => setTextScalePct(Number(e.target.value))}
+                  className="studio-range"
+                />
+              </div>
+            </div>
+          )}
+
+          {activeElementModal === "separator" && (
+            <div className="space-y-3">
+              <p className="studio-label">Estilo del separador</p>
+              <div className="flex flex-wrap gap-1.5">
+                {(
+                  [
+                    ["leaves-heart", "Ramitas ♥"],
+                    ["dots-heart", "Líneas ♥"],
+                    ["swirl-heart", "Firulete ♥"],
+                    ["none", "Desactivar"],
+                  ] as [SeparatorStyle, string][]
+                ).map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    className="studio-chip"
+                    aria-pressed={separatorStyle === id}
+                    onClick={() => setSeparatorStyle(id)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeElementModal === "logo" && (
+            <div className="space-y-3">
+              <div className="mb-1 flex items-center justify-between">
+                <label htmlFor="sheet-logo-size" className="studio-label">
+                  Tamaño del logo
+                </label>
+                <span className="text-[11px] font-bold text-[#694635]">{logoScalePct}%</span>
+              </div>
+              <input
+                id="sheet-logo-size"
+                type="range"
+                min={14}
+                max={34}
+                step={1}
+                value={logoScalePct}
+                onChange={(e) => {
+                  const next = Number(e.target.value);
+                  setLogoScalePct(next);
+                  setLogoPos((prev) => clampLogoPos(prev, next));
+                }}
+                className="studio-range"
+              />
+            </div>
+          )}
+
+          {activeElementModal === "footer" && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <label htmlFor="sheet-footer-text" className="studio-label">
+                  Texto del pie
+                </label>
+                <button
+                  type="button"
+                  aria-pressed={showWhatsappIcon}
+                  className={`studio-chip ${showWhatsappIcon ? "is-active" : ""}`}
+                  onClick={() => setShowWhatsappIcon((prev) => !prev)}
+                >
+                  Ícono WhatsApp
+                </button>
+              </div>
+              <input
+                id="sheet-footer-text"
+                type="text"
+                className="story-input"
+                value={footerText}
+                onChange={(e) => setFooterText(e.target.value)}
+                placeholder="Ej: Pedidos al 388 465-2336"
+              />
+            </div>
+          )}
+        </div>
+      </dialog>
     </div>
   );
 }

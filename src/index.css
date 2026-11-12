@@ -1192,3 +1192,43 @@
   user-select: none;
   box-shadow: 0 3px 10px rgba(73, 43, 38, 0.25);
 }
+
+/* Native bottom sheet dialog for mobile element inspector */
+.story-mobile-sheet {
+  position: fixed;
+  inset: auto 0 0 0;
+  width: 100%;
+  max-width: 100vw;
+  max-height: 72vh;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 24px 24px 0 0;
+  background: #fffefa;
+  box-shadow: 0 -12px 36px rgba(73, 43, 38, 0.22);
+  display: flex;
+  flex-direction: column;
+  z-index: 90;
+  overscroll-behavior: contain;
+}
+
+.story-mobile-sheet::backdrop {
+  background: rgba(46, 26, 22, 0.42);
+  backdrop-filter: blur(2px);
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+.story-sheet-handle-bar {
+  width: 44px;
+  height: 4px;
+  border-radius: 999px;
+  background: #d9c4bc;
+  margin: 10px auto 4px auto;
+}
+
+.story-sheet-body {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px 18px 24px 18px;
+}
