@@ -19,18 +19,7 @@ function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
-export async function downloadPngBlob(blob: Blob, filename: string): Promise<string> {
-  if (Capacitor.isNativePlatform()) {
-    const data = await blobToBase64(blob);
-    await Filesystem.writeFile({
-      path: `DulceVictoria/${filename}`,
-      data,
-      directory: Directory.Documents,
-      recursive: true,
-    });
-    return `Imagen guardada en Documentos/DulceVictoria/${filename}`;
-  }
-
+function browserAnchorDownload(blob: Blob, filename: string): string {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -38,8 +27,41 @@ export async function downloadPngBlob(blob: Blob, filename: string): Promise<str
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
   return `Imagen descargada: ${filename}`;
+}
+
+export async function downloadPngBlob(blob: Blob, filename: string): Promise<string> {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const data = await blobToBase64(blob);
+      // Intentar primero en Documentos/DulceVictoria
+      try {
+        await Filesystem.writeFile({
+          path: `DulceVictoria/${filename}`,
+          data,
+          directory: Directory.Documents,
+          recursive: true,
+        });
+        return `Imagen guardada en Documentos/DulceVictoria/${filename}`;
+      } catch (docErr) {
+        console.warn("No se pudo escribir en Documents, intentando en almacenamiento interno:", docErr);
+        // Fallback a almacenamiento privado de la app (Directory.Data)
+        await Filesystem.writeFile({
+          path: filename,
+          data,
+          directory: Directory.Data,
+          recursive: true,
+        });
+        return `Imagen guardada en el dispositivo: ${filename}`;
+      }
+    } catch (nativeErr) {
+      console.warn("Fallo en guardado nativo, usando descarga web alternativa:", nativeErr);
+      return browserAnchorDownload(blob, filename);
+    }
+  }
+
+  return browserAnchorDownload(blob, filename);
 }
 
 export async function sharePngBlob(
@@ -48,30 +70,42 @@ export async function sharePngBlob(
   title: string
 ): Promise<{ shared: boolean; message: string }> {
   if (Capacitor.isNativePlatform()) {
-    const data = await blobToBase64(blob);
-    await Filesystem.writeFile({
-      path: filename,
-      data,
-      directory: Directory.Cache,
-    });
-    const { uri } = await Filesystem.getUri({
-      path: filename,
-      directory: Directory.Cache,
-    });
-    await Share.share({
-      title,
-      url: uri,
-      dialogTitle: title,
-    });
-    return { shared: true, message: "Imagen lista para compartir." };
+    try {
+      const data = await blobToBase64(blob);
+      await Filesystem.writeFile({
+        path: filename,
+        data,
+        directory: Directory.Cache,
+      });
+      const { uri } = await Filesystem.getUri({
+        path: filename,
+        directory: Directory.Cache,
+      });
+      await Share.share({
+        title,
+        text: title,
+        url: uri,
+        files: [uri],
+        dialogTitle: title,
+      });
+      return { shared: true, message: "Imagen lista para compartir." };
+    } catch (nativeErr) {
+      console.warn("Fallo Capacitor Share, probando alternativas:", nativeErr);
+    }
   }
 
-  const file = new File([blob], filename, { type: "image/png" });
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    await navigator.share({ title, files: [file] });
-    return { shared: true, message: "Imagen compartida." };
+  // Alternativa con Web Share API estándar si el navegador lo soporta
+  try {
+    const file = new File([blob], filename, { type: "image/png" });
+    if (typeof navigator !== "undefined" && navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ title, text: title, files: [file] });
+      return { shared: true, message: "Imagen compartida exitosamente." };
+    }
+  } catch (webErr) {
+    console.warn("Fallo o cancelación de navigator.share:", webErr);
   }
 
-  const msg = await downloadPngBlob(blob, filename);
+  // Si compartir no está disponible o falla, descargamos el archivo como respaldo seguro
+  const msg = browserAnchorDownload(blob, filename);
   return { shared: false, message: msg };
 }

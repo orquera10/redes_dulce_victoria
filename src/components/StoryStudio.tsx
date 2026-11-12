@@ -681,25 +681,32 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
     });
 
     // Logo
-    const logoImg = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const logoImg = await new Promise<HTMLImageElement>((resolve) => {
       const im = new Image();
+      im.crossOrigin = "anonymous";
       im.onload = () => resolve(im);
-      im.onerror = reject;
+      im.onerror = () => {
+        console.warn("No se pudo cargar el logo para historia, continuando sin logo");
+        resolve(im);
+      };
       im.src = "/dulce-victoria-logo.png";
+      if (im.complete && im.naturalWidth > 0) resolve(im);
     });
-    const logoPx = (STORY_W * logoScalePct) / 100;
-    ctx.save();
-    ctx.shadowColor = "rgba(57, 34, 31, 0.2)";
-    ctx.shadowBlur = 24;
-    ctx.shadowOffsetY = 8;
-    ctx.drawImage(
-      logoImg,
-      logoPos.x * STORY_W - logoPx / 2,
-      logoPos.y * STORY_H - logoPx / 2,
-      logoPx,
-      logoPx
-    );
-    ctx.restore();
+    if (logoImg.naturalWidth > 0) {
+      const logoPx = (STORY_W * logoScalePct) / 100;
+      ctx.save();
+      ctx.shadowColor = "rgba(57, 34, 31, 0.2)";
+      ctx.shadowBlur = 24;
+      ctx.shadowOffsetY = 8;
+      ctx.drawImage(
+        logoImg,
+        logoPos.x * STORY_W - logoPx / 2,
+        logoPos.y * STORY_H - logoPx / 2,
+        logoPx,
+        logoPx
+      );
+      ctx.restore();
+    }
 
     // Brand text block
     const scaleFactor = textScalePct / 100;
@@ -822,14 +829,34 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
     setIsExporting(true);
     try {
       const canvas = await renderStoryCanvas();
-      const blob = await new Promise<Blob | null>((resolve) =>
+      let blob = await new Promise<Blob | null>((resolve) =>
         canvas.toBlob(resolve, "image/png", 1)
       );
-      if (!blob) throw new Error("Blob failed");
+      if (!blob) {
+        const dataUrl = canvas.toDataURL("image/png");
+        const res = await fetch(dataUrl);
+        blob = await res.blob();
+      }
+      if (!blob) throw new Error("No se pudo generar el archivo de imagen");
+
       const msg = await downloadPngBlob(blob, `dulce-victoria-historia-9x16-${Date.now()}.png`);
       onNotify(msg);
-    } catch {
-      onNotify("No pudimos generar la historia. Probá nuevamente.");
+    } catch (err) {
+      console.error("Error en handleDownloadStory:", err);
+      try {
+        const canvas = await renderStoryCanvas();
+        const dataUrl = canvas.toDataURL("image/png");
+        const link = document.createElement("a");
+        link.href = dataUrl;
+        link.download = `dulce-victoria-historia-9x16-${Date.now()}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        onNotify("Historia descargada.");
+      } catch (fallbackErr) {
+        console.error("Fallo respaldo de descarga historia:", fallbackErr);
+        onNotify("No pudimos generar la historia. Probá nuevamente.");
+      }
     } finally {
       setIsExporting(false);
     }
@@ -839,18 +866,29 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
     setIsExporting(true);
     try {
       const canvas = await renderStoryCanvas();
-      const blob = await new Promise<Blob | null>((resolve) =>
+      let blob = await new Promise<Blob | null>((resolve) =>
         canvas.toBlob(resolve, "image/png", 1)
       );
-      if (!blob) throw new Error("Blob failed");
+      if (!blob) {
+        const dataUrl = canvas.toDataURL("image/png");
+        const res = await fetch(dataUrl);
+        blob = await res.blob();
+      }
+      if (!blob) throw new Error("No se pudo generar el archivo de imagen");
+
       const res = await sharePngBlob(
         blob,
         `dulce-victoria-historia-9x16-${Date.now()}.png`,
         "Dulce Victoria — Historia 9:16"
       );
       onNotify(res.message);
-    } catch {
-      onNotify("Compartir cancelado o no disponible en este dispositivo.");
+    } catch (err) {
+      console.error("Error en handleShareStory:", err);
+      try {
+        await handleDownloadStory();
+      } catch {
+        onNotify("Compartir cancelado o no disponible en este dispositivo.");
+      }
     } finally {
       setIsExporting(false);
     }

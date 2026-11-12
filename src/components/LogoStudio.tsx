@@ -306,6 +306,10 @@ export function LogoStudio({ onNotify, showHero = true }: LogoStudioProps) {
   };
 
   const renderComposedCanvas = async (): Promise<HTMLCanvasElement> => {
+    if (document.fonts?.ready) {
+      await document.fonts.ready;
+    }
+
     const canvas = document.createElement("canvas");
     canvas.width = EXPORT_SIZE;
     canvas.height = EXPORT_SIZE;
@@ -315,52 +319,93 @@ export function LogoStudio({ onNotify, showHero = true }: LogoStudioProps) {
     ctx.fillStyle = "#f8f4e9";
     ctx.fillRect(0, 0, EXPORT_SIZE, EXPORT_SIZE);
 
-    if (uploadedImgRef.current && imageUrl) {
+    if (imageUrl) {
+      let photoImg = uploadedImgRef.current;
+      if (!photoImg || !photoImg.complete || photoImg.naturalWidth === 0) {
+        photoImg = await new Promise<HTMLImageElement>((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.onload = () => resolve(img);
+          img.onerror = () => reject(new Error("No se pudo cargar la foto seleccionada."));
+          img.src = imageUrl;
+          if (img.complete && img.naturalWidth > 0) resolve(img);
+        });
+        uploadedImgRef.current = photoImg;
+      }
+
       const { dispW, dispH, maxPanX, maxPanY } = getCoverMetrics(EXPORT_SIZE, imageZoom);
       const drawX = (EXPORT_SIZE - dispW) / 2 + imagePan.x * maxPanX;
       const drawY = (EXPORT_SIZE - dispH) / 2 + imagePan.y * maxPanY;
-      ctx.drawImage(uploadedImgRef.current, drawX, drawY, dispW, dispH);
+      ctx.drawImage(photoImg, drawX, drawY, dispW, dispH);
     }
 
-    const logoImg = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const logoImg = await new Promise<HTMLImageElement>((resolve) => {
       const img = new Image();
+      img.crossOrigin = "anonymous";
       img.onload = () => resolve(img);
-      img.onerror = reject;
+      img.onerror = () => {
+        console.warn("No se pudo cargar /dulce-victoria-logo.png");
+        resolve(img);
+      };
       img.src = "/dulce-victoria-logo.png";
+      if (img.complete && img.naturalWidth > 0) resolve(img);
     });
 
-    const logoPx = (EXPORT_SIZE * logoScalePct) / 100;
-    const logoX = logoPos.x * EXPORT_SIZE - logoPx / 2;
-    const logoY = logoPos.y * EXPORT_SIZE - logoPx / 2;
+    if (logoImg.naturalWidth > 0) {
+      const logoPx = (EXPORT_SIZE * logoScalePct) / 100;
+      const logoX = logoPos.x * EXPORT_SIZE - logoPx / 2;
+      const logoY = logoPos.y * EXPORT_SIZE - logoPx / 2;
 
-    ctx.save();
-    ctx.globalAlpha = logoOpacityPct / 100;
-    ctx.shadowColor = "rgba(57, 34, 31, 0.24)";
-    ctx.shadowBlur = 24;
-    ctx.shadowOffsetY = 8;
-    ctx.drawImage(logoImg, logoX, logoY, logoPx, logoPx);
-    ctx.restore();
+      ctx.save();
+      ctx.globalAlpha = logoOpacityPct / 100;
+      ctx.shadowColor = "rgba(57, 34, 31, 0.24)";
+      ctx.shadowBlur = 24;
+      ctx.shadowOffsetY = 8;
+      ctx.drawImage(logoImg, logoX, logoY, logoPx, logoPx);
+      ctx.restore();
+    }
 
     return canvas;
   };
 
   const handleDownload = async () => {
     if (!imageUrl) {
-      onNotify("Primero subí una foto para crear tu imagen 1:1.");
+      onNotify("Primero subí una foto de tus tortas o postres para crear tu posteo 1:1.");
       return;
     }
     setIsExporting(true);
     try {
       const canvas = await renderComposedCanvas();
-      const blob = await new Promise<Blob | null>((resolve) =>
+      let blob = await new Promise<Blob | null>((resolve) =>
         canvas.toBlob(resolve, "image/png", 1)
       );
-      if (!blob) throw new Error("Blob failed");
+      if (!blob) {
+        const dataUrl = canvas.toDataURL("image/png");
+        const res = await fetch(dataUrl);
+        blob = await res.blob();
+      }
+      if (!blob) throw new Error("No se pudo generar el archivo de imagen.");
 
-      const msg = await downloadPngBlob(blob, `dulce-victoria-1x1-${Date.now()}.png`);
+      const filename = `dulce-victoria-1x1-${Date.now()}.png`;
+      const msg = await downloadPngBlob(blob, filename);
       onNotify(msg);
-    } catch {
-      onNotify("No pudimos generar la imagen. Intentá nuevamente.");
+    } catch (err) {
+      console.error("Error en handleDownload LogoStudio:", err);
+      // Respaldo de descarga directa en navegador
+      try {
+        const canvas = await renderComposedCanvas();
+        const dataUrl = canvas.toDataURL("image/png");
+        const link = document.createElement("a");
+        link.href = dataUrl;
+        link.download = `dulce-victoria-1x1-${Date.now()}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        onNotify("Imagen 1:1 descargada en formato PNG.");
+      } catch (fallbackErr) {
+        console.error("Fallo respaldo de descarga:", fallbackErr);
+        onNotify("No pudimos generar la imagen. Intentá nuevamente.");
+      }
     } finally {
       setIsExporting(false);
     }
@@ -368,25 +413,35 @@ export function LogoStudio({ onNotify, showHero = true }: LogoStudioProps) {
 
   const handleShare = async () => {
     if (!imageUrl) {
-      onNotify("Primero subí una foto para compartir.");
+      onNotify("Primero subí una foto para compartir tu posteo 1:1.");
       return;
     }
     setIsExporting(true);
     try {
       const canvas = await renderComposedCanvas();
-      const blob = await new Promise<Blob | null>((resolve) =>
+      let blob = await new Promise<Blob | null>((resolve) =>
         canvas.toBlob(resolve, "image/png", 1)
       );
-      if (!blob) throw new Error("Blob failed");
+      if (!blob) {
+        const dataUrl = canvas.toDataURL("image/png");
+        const res = await fetch(dataUrl);
+        blob = await res.blob();
+      }
+      if (!blob) throw new Error("No se pudo generar el archivo de imagen.");
 
       const res = await sharePngBlob(
         blob,
         `dulce-victoria-1x1-${Date.now()}.png`,
-        "Dulce Victoria — Imagen 1:1"
+        "Dulce Victoria — Posteo 1:1"
       );
       onNotify(res.message);
-    } catch {
-      onNotify("Compartir cancelado o no disponible en este dispositivo.");
+    } catch (err) {
+      console.error("Error en handleShare LogoStudio:", err);
+      try {
+        await handleDownload();
+      } catch {
+        onNotify("Compartir cancelado o no disponible en este dispositivo.");
+      }
     } finally {
       setIsExporting(false);
     }
@@ -665,7 +720,7 @@ export function LogoStudio({ onNotify, showHero = true }: LogoStudioProps) {
             <button
               type="button"
               className="studio-download-btn flex-1"
-              disabled={!imageUrl || isExporting}
+              disabled={isExporting}
               onClick={handleDownload}
             >
               <Download size={17} aria-hidden="true" />
@@ -674,7 +729,7 @@ export function LogoStudio({ onNotify, showHero = true }: LogoStudioProps) {
             <button
               type="button"
               className="studio-secondary-btn"
-              disabled={!imageUrl || isExporting}
+              disabled={isExporting}
               onClick={handleShare}
             >
               <Share2 size={16} aria-hidden="true" />
