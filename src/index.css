@@ -865,3 +865,236 @@
   pointer-events: none;
   backdrop-filter: blur(2px);
 }
+
+
+.design-mode-bar {
+  display: inline-flex;
+  gap: 6px;
+  padding: 5px;
+  border-radius: 999px;
+  background: #efe6dc;
+  border: 1px solid #e2d2c4;
+  align-self: flex-start;
+}
+
+.design-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-block-size: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #7c5b53;
+  cursor: pointer;
+  transition: background-color 0.16s, color 0.16s, box-shadow 0.16s;
+}
+
+.design-mode-btn[aria-pressed="true"] {
+  background: #bd807d;
+  color: #fff;
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px #9b5962;
+}
+
+.studio-chip[aria-pressed="true"],
+.story-seg-btn[aria-pressed="true"] {
+  background: #bd807d;
+  border-color: #9b5962;
+  color: #fff;
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px #9b5962;
+}
+
+.story-segmented {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.story-seg-btn {
+  min-block-size: 40px;
+  border-radius: 12px;
+  border: 1px solid #e2d2c4;
+  background: #fbf8ef;
+  font-size: 12px;
+  font-weight: 600;
+  color: #694635;
+  cursor: pointer;
+}
+
+.story-stage {
+  position: relative;
+  width: 100%;
+  max-width: 370px;
+  margin-inline: auto;
+  aspect-ratio: 9 / 16;
+  overflow: hidden;
+  border-radius: 24px;
+  border: 1.5px solid #e2d2c4;
+  background: #f8f4e9;
+  box-shadow: 0 16px 40px #563a2a1a;
+}
+
+.story-bg-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.story-frame {
+  position: absolute;
+  border-radius: 6px;
+  box-shadow: 0 10px 26px rgba(73, 43, 38, 0.18);
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: grab;
+  transition: box-shadow 0.15s;
+}
+
+.story-frame.is-dragging {
+  cursor: grabbing;
+}
+
+.story-frame-polaroid,
+.story-frame-tape {
+  background: #fffefa;
+}
+
+.story-frame-soft {
+  background: #f1dfda;
+  border-radius: 14px;
+}
+
+.story-frame.is-selected {
+  outline: 2px solid #9b5962;
+  outline-offset: 2px;
+}
+
+.story-frame.is-file-over {
+  outline: 2.5px dashed #9b5962;
+  outline-offset: 2px;
+}
+
+.story-frame-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 4px;
+  background: #efe6dc;
+}
+
+.story-frame-soft .story-frame-inner {
+  border-radius: 10px;
+}
+
+.story-tape {
+  position: absolute;
+  top: -6px;
+  width: 34px;
+  height: 12px;
+  background: rgba(232, 212, 198, 0.88);
+  z-index: 3;
+  pointer-events: none;
+}
+
+.story-tape-left {
+  left: -8px;
+  transform: rotate(-28deg);
+}
+
+.story-tape-right {
+  right: -8px;
+  transform: rotate(28deg);
+}
+
+.story-slot-empty {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: #8f6c66;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.story-floating {
+  z-index: 6;
+}
+
+.story-text-handle {
+  position: absolute;
+  z-index: 7;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 8px 18px;
+  border-radius: 999px;
+  border: 0;
+  background: transparent;
+  cursor: grab;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  line-height: 0.96;
+  max-width: 90%;
+}
+
+.story-text-handle.has-brush {
+  background: rgba(241, 223, 218, 0.9);
+}
+
+.story-text-handle.is-dragging {
+  cursor: grabbing;
+}
+
+.story-title-serif {
+  font-family: "DM Serif Display", Georgia, serif;
+  font-weight: 600;
+  color: #563a2a;
+  white-space: nowrap;
+}
+
+.story-title-script {
+  font-family: "Dancing Script", cursive;
+  font-weight: 700;
+  color: #bd807d;
+  white-space: nowrap;
+}
+
+.story-footer-pill {
+  position: absolute;
+  left: 50%;
+  bottom: 5.5%;
+  transform: translateX(-50%);
+  z-index: 6;
+  padding: 6px 16px;
+  border-radius: 999px;
+  background: #fffefa;
+  border: 1.5px solid #d7b7ae;
+  color: #563a2a;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.story-input {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid #e3d4cd;
+  background: #fffefa;
+  font-size: 13px;
+  color: #4e3633;
+}

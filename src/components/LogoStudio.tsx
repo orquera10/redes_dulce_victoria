@@ -19,6 +19,7 @@ import {
 
 type LogoStudioProps = {
   onNotify: (message: string, duration?: number) => void;
+  showHero?: boolean;
 };
 
 type Point = {
@@ -37,7 +38,7 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-export function LogoStudio({ onNotify }: LogoStudioProps) {
+export function LogoStudio({ onNotify, showHero = true }: LogoStudioProps) {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageSize, setImageSize] = useState<Size>({ w: 0, h: 0 });
   const [imageZoom, setImageZoom] = useState(1);
@@ -407,17 +408,23 @@ export function LogoStudio({ onNotify }: LogoStudioProps) {
 
   return (
     <div>
-      <div>
-        <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#b1776e]">
-          Estudio visual 1:1
-        </p>
-        <h1 className="font-display text-[34px] leading-tight tracking-[-0.035em] md:text-[42px]">
-          Prepará tu foto{" "}
-          <span className="italic text-[#9b5962]">con el logo de la marca.</span>
-        </h1>
-      </div>
+      {showHero && (
+        <div>
+          <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#b1776e]">
+            Estudio visual 1:1
+          </p>
+          <h1 className="font-display text-[34px] leading-tight tracking-[-0.035em] md:text-[42px]">
+            Prepará tu foto{" "}
+            <span className="italic text-[#9b5962]">con el logo de la marca.</span>
+          </h1>
+        </div>
+      )}
 
-      <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,460px)_1fr] md:items-start md:gap-8">
+      <div
+        className={`${
+          showHero ? "mt-6" : "mt-2"
+        } grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,460px)_1fr] md:items-start md:gap-8`}
+      >
         <div>
           <div
             ref={stageRef}

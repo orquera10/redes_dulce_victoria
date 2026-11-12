@@ -10,13 +10,13 @@ import {
   Clock3,
   Heart,
   Home,
-  ImagePlus,
   Lightbulb,
+  Palette,
   Plus,
   Sparkles,
   X,
 } from "lucide-react";
-import { LogoStudio } from "./components/LogoStudio";
+import { DesignHub } from "./components/DesignHub";
 
 type Post = {
   id: number;
@@ -247,8 +247,8 @@ export default function App() {
               aria-current={activeTab === "studio" ? "page" : undefined}
               onClick={() => setActiveTab("studio")}
             >
-              <ImagePlus size={16} aria-hidden="true" />
-              <span>Logo 1:1</span>
+              <Palette size={16} aria-hidden="true" />
+              <span>Diseño</span>
             </button>
             <button
               type="button"
@@ -456,7 +456,7 @@ export default function App() {
           </div>
         )}
 
-        {activeTab === "studio" && <LogoStudio onNotify={showToast} />}
+        {activeTab === "studio" && <DesignHub onNotify={showToast} />}
 
         {activeTab === "progress" && (
           <div>
@@ -538,8 +538,8 @@ export default function App() {
           aria-current={activeTab === "studio" ? "page" : undefined}
           onClick={() => setActiveTab("studio")}
         >
-          <ImagePlus size={20} aria-hidden="true" />
-          <span>Logo 1:1</span>
+          <Palette size={20} aria-hidden="true" />
+          <span>Diseño</span>
         </button>
         <button
           type="button"
