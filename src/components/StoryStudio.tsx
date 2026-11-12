@@ -10,6 +10,7 @@ import {
 import {
   Download,
   ImagePlus,
+  Maximize2,
   Move,
   RotateCcw,
   Share2,
@@ -202,10 +203,19 @@ function drawPastelDots(ctx: CanvasRenderingContext2D, dots: Array<[number, numb
   });
 }
 
+function createInitialRects(): Record<PhotoCount, SlotRect[]> {
+  return {
+    1: LAYOUTS[1].map((r) => ({ ...r })),
+    2: LAYOUTS[2].map((r) => ({ ...r })),
+    3: LAYOUTS[3].map((r) => ({ ...r })),
+  };
+}
+
 export function StoryStudio({ onNotify }: StoryStudioProps) {
   const [photoCount, setPhotoCount] = useState<PhotoCount>(3);
   const [selectedSlot, setSelectedSlot] = useState(0);
   const [slots, setSlots] = useState<SlotState[]>([emptySlot(), emptySlot(), emptySlot()]);
+  const [rectsByCount, setRectsByCount] = useState<Record<PhotoCount, SlotRect[]>>(createInitialRects);
 
   const [bgStyle, setBgStyle] = useState<BgStyle>("botanical");
   const [frameStyle, setFrameStyle] = useState<FrameStyle>("polaroid");
@@ -233,13 +243,14 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
   const slotDragDepthRef = useRef<Record<number, number>>({});
 
   const dragOriginRef = useRef<{
-    kind: "slot" | "logo" | "text";
+    kind: "slot" | "frame-move" | "frame-resize" | "logo" | "text";
     slotIndex?: number;
     pointerId: number;
     startX: number;
     startY: number;
     startPan?: Point;
     startPos?: Point;
+    startRect?: SlotRect;
   } | null>(null);
 
   useEffect(() => {
@@ -338,15 +349,34 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
     };
   };
 
+  const updateSlotRect = (slotIdx: number, updater: (rect: SlotRect) => SlotRect) => {
+    setRectsByCount((prev) => ({
+      ...prev,
+      [photoCount]: prev[photoCount].map((r, idx) => (idx === slotIdx ? updater(r) : r)),
+    }));
+  };
+
   const handleSlotPointerDown = (
     slotIdx: number,
     event: ReactPointerEvent<HTMLDivElement>
   ) => {
     setSelectedSlot(slotIdx);
-    if (!slots[slotIdx]?.url) return;
     if (event.pointerType === "mouse" && event.button !== 0) return;
 
     event.currentTarget.setPointerCapture(event.pointerId);
+    if (!slots[slotIdx]?.url) {
+      dragOriginRef.current = {
+        kind: "frame-move",
+        slotIndex: slotIdx,
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        startRect: rectsByCount[photoCount][slotIdx],
+      };
+      setDraggingItem(`frame-move-${slotIdx}`);
+      return;
+    }
+
     dragOriginRef.current = {
       kind: "slot",
       slotIndex: slotIdx,
@@ -364,16 +394,22 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
     event: ReactPointerEvent<HTMLDivElement>
   ) => {
     const origin = dragOriginRef.current;
-    if (
-      !origin ||
-      origin.kind !== "slot" ||
-      origin.slotIndex !== slotIdx ||
-      origin.pointerId !== event.pointerId ||
-      !origin.startPan
-    ) {
+    if (!origin || origin.slotIndex !== slotIdx || origin.pointerId !== event.pointerId) return;
+    if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
+
+    if (origin.kind === "frame-move" && origin.startRect) {
+      const dx = (event.clientX - origin.startX) / stageSize.w;
+      const dy = (event.clientY - origin.startY) / stageSize.h;
+      const base = origin.startRect;
+      updateSlotRect(slotIdx, (current) => ({
+        ...current,
+        x: clamp(base.x + dx, 0, Math.max(0, 1 - current.w)),
+        y: clamp(base.y + dy, 0, Math.max(0, 1 - current.h)),
+      }));
       return;
     }
-    if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
+
+    if (origin.kind !== "slot" || !origin.startPan) return;
 
     const frameW = rect.w * stageSize.w;
     const frameH = rect.h * stageSize.h;
@@ -394,6 +430,96 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
     setSlots((prev) =>
       prev.map((item, idx) => (idx === slotIdx ? { ...item, pan: nextPan } : item))
     );
+  };
+
+  const handleFrameHandlePointerDown = (
+    kind: "frame-move" | "frame-resize",
+    slotIdx: number,
+    event: ReactPointerEvent<HTMLButtonElement>
+  ) => {
+    event.stopPropagation();
+    setSelectedSlot(slotIdx);
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragOriginRef.current = {
+      kind,
+      slotIndex: slotIdx,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      startRect: rectsByCount[photoCount][slotIdx],
+    };
+    setDraggingItem(`${kind}-${slotIdx}`);
+  };
+
+  const handleFrameHandlePointerMove = (
+    kind: "frame-move" | "frame-resize",
+    slotIdx: number,
+    event: ReactPointerEvent<HTMLButtonElement>
+  ) => {
+    event.stopPropagation();
+    const origin = dragOriginRef.current;
+    if (
+      !origin ||
+      origin.kind !== kind ||
+      origin.slotIndex !== slotIdx ||
+      origin.pointerId !== event.pointerId ||
+      !origin.startRect
+    ) {
+      return;
+    }
+    if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
+
+    const dx = (event.clientX - origin.startX) / stageSize.w;
+    const dy = (event.clientY - origin.startY) / stageSize.h;
+    const base = origin.startRect;
+
+    if (kind === "frame-move") {
+      updateSlotRect(slotIdx, (current) => ({
+        ...current,
+        x: clamp(base.x + dx, 0, Math.max(0, 1 - current.w)),
+        y: clamp(base.y + dy, 0, Math.max(0, 1 - current.h)),
+      }));
+    } else {
+      updateSlotRect(slotIdx, (current) => ({
+        ...current,
+        w: clamp(base.w + dx, 0.22, Math.max(0.22, 1 - current.x)),
+        h: clamp(base.h + dy, 0.14, Math.max(0.14, 1 - current.y)),
+      }));
+    }
+  };
+
+  const handleFrameHandleKeyDown = (
+    kind: "frame-move" | "frame-resize",
+    slotIdx: number,
+    event: KeyboardEvent<HTMLButtonElement>
+  ) => {
+    const step = event.shiftKey ? 0.04 : 0.015;
+    let dx = 0;
+    let dy = 0;
+    if (event.key === "ArrowLeft") dx = -step;
+    if (event.key === "ArrowRight") dx = step;
+    if (event.key === "ArrowUp") dy = -step;
+    if (event.key === "ArrowDown") dy = step;
+    if (dx === 0 && dy === 0) return;
+
+    event.preventDefault();
+    if (kind === "frame-move") {
+      updateSlotRect(slotIdx, (r) => ({
+        ...r,
+        x: clamp(r.x + dx, 0, Math.max(0, 1 - r.w)),
+        y: clamp(r.y + dy, 0, Math.max(0, 1 - r.h)),
+      }));
+      setLiveStatus(`Marco ${slotIdx + 1} movido.`);
+    } else {
+      updateSlotRect(slotIdx, (r) => ({
+        ...r,
+        w: clamp(r.w + dx, 0.22, Math.max(0.22, 1 - r.x)),
+        h: clamp(r.h + dy, 0.14, Math.max(0.14, 1 - r.y)),
+      }));
+      setLiveStatus(`Tamaño del marco ${slotIdx + 1} actualizado.`);
+    }
   };
 
   const clampLogoPos = (pos: Point, scalePct = logoScalePct): Point => {
@@ -631,7 +757,7 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
     }
 
     // Photos in 1, 2, or 3 frames
-    const activeLayout = LAYOUTS[photoCount];
+    const activeLayout = rectsByCount[photoCount];
     activeLayout.forEach((rect, idx) => {
       const slot = slots[idx];
       const img = slotImagesRef.current[idx];
@@ -827,8 +953,9 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
     }
   };
 
-  const activeLayout = LAYOUTS[photoCount];
+  const activeLayout = rectsByCount[photoCount];
   const currentSlot = slots[selectedSlot] || slots[0];
+  const currentRect = activeLayout[selectedSlot] || activeLayout[0];
   const uiScale = stageSize.w / STORY_W;
 
   return (
@@ -1036,6 +1163,38 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
                     </button>
                   )}
                 </div>
+
+                {selectedSlot === idx && (
+                  <>
+                    <button
+                      type="button"
+                      className="story-frame-move-handle"
+                      aria-label={`Mover marco Foto ${idx + 1}. Arrastrá o usá las flechas.`}
+                      onPointerDown={(e) => handleFrameHandlePointerDown("frame-move", idx, e)}
+                      onPointerMove={(e) => handleFrameHandlePointerMove("frame-move", idx, e)}
+                      onPointerUp={endPointerDrag}
+                      onPointerCancel={endPointerDrag}
+                      onLostPointerCapture={endPointerDrag}
+                      onKeyDown={(e) => handleFrameHandleKeyDown("frame-move", idx, e)}
+                    >
+                      <Move size={11} aria-hidden="true" />
+                      <span>Mover</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="story-frame-resize-handle"
+                      aria-label={`Redimensionar marco Foto ${idx + 1}. Arrastrá o usá las flechas.`}
+                      onPointerDown={(e) => handleFrameHandlePointerDown("frame-resize", idx, e)}
+                      onPointerMove={(e) => handleFrameHandlePointerMove("frame-resize", idx, e)}
+                      onPointerUp={endPointerDrag}
+                      onPointerCancel={endPointerDrag}
+                      onLostPointerCapture={endPointerDrag}
+                      onKeyDown={(e) => handleFrameHandleKeyDown("frame-resize", idx, e)}
+                    >
+                      <Maximize2 size={12} aria-hidden="true" />
+                    </button>
+                  </>
+                )}
               </div>
             );
           })}
@@ -1209,6 +1368,78 @@ export function StoryStudio({ onNotify }: StoryStudioProps) {
               className="studio-range"
             />
           </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <div className="mb-1 flex items-center justify-between">
+                <label htmlFor="story-frame-w" className="studio-label">
+                  Ancho marco
+                </label>
+                <span className="text-[11px] font-bold text-[#694635]">
+                  {Math.round(currentRect.w * 100)}%
+                </span>
+              </div>
+              <input
+                id="story-frame-w"
+                type="range"
+                min={22}
+                max={96}
+                step={1}
+                value={Math.round(currentRect.w * 100)}
+                onChange={(e) => {
+                  const nextW = Number(e.target.value) / 100;
+                  updateSlotRect(selectedSlot, (r) => ({
+                    ...r,
+                    w: nextW,
+                    x: clamp(r.x, 0, Math.max(0, 1 - nextW)),
+                  }));
+                }}
+                className="studio-range"
+              />
+            </div>
+            <div>
+              <div className="mb-1 flex items-center justify-between">
+                <label htmlFor="story-frame-h" className="studio-label">
+                  Alto marco
+                </label>
+                <span className="text-[11px] font-bold text-[#694635]">
+                  {Math.round(currentRect.h * 100)}%
+                </span>
+              </div>
+              <input
+                id="story-frame-h"
+                type="range"
+                min={14}
+                max={75}
+                step={1}
+                value={Math.round(currentRect.h * 100)}
+                onChange={(e) => {
+                  const nextH = Number(e.target.value) / 100;
+                  updateSlotRect(selectedSlot, (r) => ({
+                    ...r,
+                    h: nextH,
+                    y: clamp(r.y, 0, Math.max(0, 1 - nextH)),
+                  }));
+                }}
+                className="studio-range"
+              />
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="studio-chip"
+            onClick={() => {
+              setRectsByCount((prev) => ({
+                ...prev,
+                [photoCount]: LAYOUTS[photoCount].map((r) => ({ ...r })),
+              }));
+              setLiveStatus("Marcos restaurados al diseño original.");
+            }}
+          >
+            <RotateCcw size={12} className="inline mr-1" aria-hidden="true" />
+            Restaurar tamaño y posición de marcos
+          </button>
         </div>
 
         {/* Text controls */}
